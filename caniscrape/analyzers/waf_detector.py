@@ -7,7 +7,6 @@ def detect_waf(url: str) -> dict[str, any]:
     Runs wafw00f to detect a WAF and parses its output.
     Returns the WAF names if found, otherwise None.
     """
-    print('Running WAF detection...')
     try:
         command = ['wafw00f', url]
 
