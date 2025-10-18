@@ -56,5 +56,4 @@ def check_robots_txt(url: str) -> dict[str, any]:
             return {'status': 'error', 'message': response.status_code}
         
     except requests.RequestException as e:
-        print(f"Exception caught: {e}")
-        return {'status': 'error', 'message': e}
+        return {'status': 'error', 'message': str(e)}
