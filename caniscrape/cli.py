@@ -7,6 +7,7 @@ from .analyzers.waf_detector import detect_waf
 from .analyzers.robots_checker import check_robots_txt
 from .analyzers.rate_limit_profiler import profile_rate_limits
 from .analyzers.tls_analyzer import analyze_tls_fingerprint
+from .analyzers.js_detector import analyze_js_rendering
 
 @click.group()
 def cli():
@@ -42,10 +43,13 @@ def analyze(url: str, find_all: bool, impersonate: bool):
     print('🔬 Analyzing TLS fingerprint...')
     tls_result = analyze_tls_fingerprint(url)
 
+    print('⚙️  Analyzing JavaScript rendering...')
+    js_result = analyze_js_rendering(url)
+
     if impersonate:
         print('⏱️ Profiling rate limits with browser-like client...')
     else:
-        print('⏱️ Profiling rate limits with Python client...')
+        print('⏱️  Profiling rate limits with Python client...')
     rate_limit_result = profile_rate_limits(url, crawl_delay, impersonate)
 
     print('🔍 Running WAF detection...')
@@ -67,7 +71,7 @@ def analyze(url: str, find_all: bool, impersonate: bool):
             print('    [red]❌ robots.txt: Explicitly disallows scraping for all bots (\'Disallow: /\')[/red]')
         else:
             delay = robots_result.get('crawl_delay')
-            message = 'Website allows scraping'
+            message = 'Website allows scraping (for details on specific pages, navigate to <url>/robots.txt in your browser.)'
             if delay:
                 message += f' (Crawl-delay: {delay}s)'
             print(f'    [green]✅ robots.txt: {message}[/green]')
@@ -85,6 +89,18 @@ def analyze(url: str, find_all: bool, impersonate: bool):
     elif tls_status == 'inconclusive':
         print(f'    [yellow]⚠️  TLS Fingerprinting: {tls_result['details']}[/yellow]')
 
+    # JS rendering check
+    js_status = js_result['status']
+    if js_status == 'success':
+        if js_result.get('is_spa'):
+            print(f'    [red]❌ JavaScript: Required (React/Vue/Angular SPA). {js_result['content_difference_%']}% of content is missing without JS.[/red]')
+        elif js_result.get('js_required'):
+            print(f'    [yellow]⚠️  JavaScript: Required for some content. {js_result['content_difference_%']}% of content is missing without JS.[/yellow]')
+        else:
+            print(f'    [green]✅ JavaScript: Not required for main content.[/green]')
+    else:
+        print(f'    [yellow]⚠️  JavaScript: Analysis failed. Reason: {js_result['message']}[/yellow]')
+
     # Rate limit check
     rate_limit_status = rate_limit_result['status']
     if rate_limit_status == 'success':
@@ -93,6 +109,7 @@ def analyze(url: str, find_all: bool, impersonate: bool):
             print(f'    [red]❌ Rate Limiting: {results['details']}[/red]')
             print(f'    [yellow]💡 [bold]Advice:[/bold] This is likely due to client fingerprinting (TLS fingerprinting, User-Agent, etc.), not a classic rate limit.[/yellow]')
             print(f'       [yellow]Run the analysis again. A different browser identity will be used, which may not be blocked.[/yellow]')
+            print (f'    [yellow]   Otherwise, try the --impersonate flag, it will take longer but is likely to succeed.')
         else:
             print(f'    [green]✅ Rate Limiting: {results['details']}[/green]')
     else:
