@@ -57,32 +57,32 @@ def cli(url: str, find_all: bool, impersonate: bool, scan_depth: str | None):
         print('    [yellow]You have 5 seconds after the above message(s) to cancel. (Ctrl + C to cancel)[/yellow]')
         sleep(5)
 
-    print('🤖 Checking robots.txt...')
+    print('Checking robots.txt...')
     robots_result = check_robots_txt(url)
     crawl_delay = robots_result.get('crawl_delay')
 
-    print('🔬 Analyzing TLS fingerprint...')
+    print('Analyzing TLS fingerprint...')
     tls_result = analyze_tls_fingerprint(url)
 
-    print('⚙️  Analyzing JavaScript rendering...')
+    print('Analyzing JavaScript rendering...')
     js_result = analyze_js_rendering(url)
 
     if scan_depth is None:
-        print('🕵️  Analyzing for behavioral traps (default scan)...')
+        print('Analyzing for behavioral traps (default scan)...')
     else:
-        print(f'🕵️  Analyzing for behavioral traps ({scan_depth} scan)...')
+        print(f'Analyzing for behavioral traps ({scan_depth} scan)...')
     behavioral_result = detect_honeypots(url, scan_depth=scan_depth)
 
-    print('⚔️  Detecting CAPTCHA...')
+    print('Detecting CAPTCHA...')
     captcha_result = detect_captcha(url)
 
     if impersonate:
-        print('⏱️  Profiling rate limits with browser-like client...')
+        print('Profiling rate limits with browser-like client...')
     else:
-        print('⏱️  Profiling rate limits with Python client...')
+        print('Profiling rate limits with Python client...')
     rate_limit_result = profile_rate_limits(url, crawl_delay, impersonate)
 
-    print('🔍 Running WAF detection...')
+    print('Running WAF detection...')
     waf_result = detect_waf(url, find_all)
 
     # --- PROCESS INTELLIGENCE WITH THE "BRAIN" ---
@@ -104,7 +104,9 @@ def cli(url: str, find_all: bool, impersonate: bool, scan_depth: str | None):
     print(Rule(f"[bold white on blue] DIFFICULTY SCORE: {score_card['score']}/10 ({score_card['label']}) [/]", style="blue"))
     print()
 
-    print(Panel.fit("[bold]🛡️  ACTIVE PROTECTIONS[/bold]", style="yellow", border_style="yellow"))
+    print()
+    print("[bold yellow]🛡️  ACTIVE PROTECTIONS[/bold yellow]")
+    print()
 
     # Robots.txt check
     robots_status = robots_result['status']
