@@ -10,8 +10,6 @@ def check_robots_txt(url: str) -> dict[str, any]:
         parsed_url = urlparse(url)
         robots_url = urlunparse((parsed_url.scheme, parsed_url.netloc, 'robots.txt', '', '', ''))
 
-        print(f"Fetching: {robots_url}")
-
         headers = {'User-Agent': 'Mozilla/5.0 (compatible; caniscrape-bot/1.0)'}
         response = requests.get(robots_url, timeout=10, headers=headers, allow_redirects=True)
 

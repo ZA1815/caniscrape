@@ -6,6 +6,7 @@ from time import sleep
 from .analyzers.waf_detector import detect_waf
 from .analyzers.robots_checker import check_robots_txt
 from .analyzers.rate_limit_profiler import profile_rate_limits
+from .analyzers.tls_analyzer import analyze_tls_fingerprint
 
 @click.group()
 def cli():
@@ -32,6 +33,9 @@ def analyze(url: str, waf_samples: int):
     robots_result = check_robots_txt(url)
     crawl_delay = robots_result.get('crawl_delay')
 
+    print('🔬 Analyzing TLS fingerprint...')
+    tls_result = analyze_tls_fingerprint(url)
+
     print('⏱️ Profiling rate limits...')
     rate_limit_result = profile_rate_limits(url, crawl_delay)
 
@@ -39,7 +43,7 @@ def analyze(url: str, waf_samples: int):
 
     if waf_samples > 1:
         print(f'[yellow]⚠️  Heads up: Running with {waf_samples} WAF samples is aggressive and may trigger rate limits or temporary IP bans.[/yellow]\n')
-        print('[yellow]You have 5 seconds after this message to cancel. (Ctrl + C to cancel)[/yellow]')
+        print('   [yellow]You have 5 seconds after this message to cancel. (Ctrl + C to cancel)[/yellow]')
         sleep(5)
 
     waf_result = detect_waf(url)
@@ -63,13 +67,22 @@ def analyze(url: str, waf_samples: int):
     elif robots_status == 'error':
         print(f'    [yellow]⚠️ robots.txt: Could not be analyzed. Reason: {robots_result['message']}[/yellow]')
 
+    # TLS check
+    tls_status = tls_result['status']
+    if tls_status == 'active':
+        print(f'    [red]❌ TLS Fingerprinting: {tls_result['details']}[/red]')
+    elif tls_status == 'inactive':
+        print(f'    [green]✅ TLS Fingerprinting: {tls_result['details']}[/green]')
+    elif tls_status == 'inconclusive':
+        print(f'    [yellow]⚠️  TLS Fingerprinting: {tls_result['details']}[/yellow]')
+
     # Rate limit check
     rate_limit_status = rate_limit_result['status']
     if rate_limit_status == 'success':
         results = rate_limit_result['results']
         if results.get('blocking_code') and results.get('requests_sent') == 1:
             print(f'    [red]❌ Rate Limiting: {results['details']}[/red]')
-            print(f'    [yellow]💡 [bold]Advice:[/bold] This is likely due to client fingerprinting (headers, User-Agent, etc.), not a classic rate limit.[/yellow]')
+            print(f'    [yellow]💡 [bold]Advice:[/bold] This is likely due to client fingerprinting (TLS fingerprinting, User-Agent, etc.), not a classic rate limit.[/yellow]')
             print(f'    [yellow][bold]Recommendation:[/bold] Run the analysis again. A different browser identity will be used, which may not be blocked.[/yellow]')
         else:
             print(f'    [green]✅ Rate Limiting: {results['details']}[/green]')
