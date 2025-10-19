@@ -8,15 +8,9 @@ from .analyzers.robots_checker import check_robots_txt
 from .analyzers.rate_limit_profiler import profile_rate_limits
 from .analyzers.tls_analyzer import analyze_tls_fingerprint
 from .analyzers.js_detector import analyze_js_rendering
+from .analyzers.behavioral_detector import detect_honeypots
 
-@click.group()
-def cli():
-    """
-    A cli tool for analyzing how hard a website is to scrape.
-    """
-    pass
-
-@cli.command()
+@click.command()
 @click.argument('url')
 @click.option(
     '--find-all',
@@ -30,11 +24,33 @@ def cli():
     default=False,
     help='Switches from using a basic python script to impersonating a real browser (curl_cffi library). Default is False. Impersonating will likely take longer but is more likely to succeed.'
 )
-def analyze(url: str, find_all: bool, impersonate: bool):
+@click.option(
+    '--thorough',
+    'scan_depth',
+    flag_value='thorough',
+    help='Makes the behavioral detector scan through about 2/3 of the total links. Will give great accuracy in detecting honeypots but is slower on large sites.'
+)
+@click.option(
+    '--deep',
+    'scan_depth',
+    flag_value='deep',
+    help='Makes the behavioral detector scan through all the links. Will give excellent accuracy in detecing honeypots but is very slow on large sites.'
+)
+def cli(url: str, find_all: bool, impersonate: bool, scan_depth: str | None):
     """
     Analyzes a single URL for scraping difficulty.
     """
     print(f'Analyzing: [bold blue]{url}[/bold blue]...')
+
+    if find_all:
+        print(f'    [yellow]⚠️  Running with --find-all is aggressive and may trigger rate limits or temporary IP bans.[/yellow]\n')
+    if scan_depth == 'thorough':
+        print(f'    [yellow]⚠️  --thorough scan selected. Behavioral analysis may take several minutes on large sites.[/bold yellow]')
+    if scan_depth == 'deep':
+        print(f'    [yellow]⚠️  --deep scan selected. Behavioral analysis may take 10+ minutes on large sites.[/bold yellow]')
+    if find_all or scan_depth:
+        print('    [yellow]You have 5 seconds after the above message(s) to cancel. (Ctrl + C to cancel)[/yellow]')
+        sleep(5)
 
     print('🤖 Checking robots.txt...')
     robots_result = check_robots_txt(url)
@@ -46,6 +62,12 @@ def analyze(url: str, find_all: bool, impersonate: bool):
     print('⚙️  Analyzing JavaScript rendering...')
     js_result = analyze_js_rendering(url)
 
+    if scan_depth is None:
+        print('🕵️  Analyzing for behavioral traps (default scan)...')
+    else:
+        print(f'🕵️  Analyzing for behavioral traps ({scan_depth} scan)...')
+    behavioral_result = detect_honeypots(url, scan_depth=scan_depth)
+
     if impersonate:
         print('⏱️ Profiling rate limits with browser-like client...')
     else:
@@ -53,13 +75,8 @@ def analyze(url: str, find_all: bool, impersonate: bool):
     rate_limit_result = profile_rate_limits(url, crawl_delay, impersonate)
 
     print('🔍 Running WAF detection...')
-
-    if find_all:
-        print(f'  [yellow]⚠️  Heads up: Running with --find-all is aggressive and may trigger rate limits or temporary IP bans.[/yellow]\n')
-        print('   [yellow]You have 5 seconds after this message to cancel. (Ctrl + C to cancel)[/yellow]')
-        sleep(5)
-
     waf_result = detect_waf(url, find_all)
+
 
     # Start of output
     print('\n🛡️  PROTECTIONS DETECTED: \n')
@@ -101,12 +118,24 @@ def analyze(url: str, find_all: bool, impersonate: bool):
     else:
         print(f'    [yellow]⚠️  JavaScript: Analysis failed. Reason: {js_result['message']}[/yellow]')
 
+    # Behavioral check
+    behavioral_status = behavioral_result['status']
+    if behavioral_status == 'success':
+        if behavioral_result.get('honeypot_detected'):
+            count = behavioral_result['invisible_links']
+            checked = behavioral_result['links_checked']
+            print(f'    [red]❌ Behavioral Analysis: Found {count} invisible "honeypot" links (out of {checked} checked). There are many bot traps.[/red]')
+        else:
+            print(f'    [green]✅ Behavioral Analysis: No obvious honeypot traps detected.[/green]')
+    else:
+        print(f'    [yellow]⚠️  Behavioral Analysis: Test failed. Reason: {behavioral_result['message']}[/yellow]')
+
     # Rate limit check
     rate_limit_status = rate_limit_result['status']
     if rate_limit_status == 'success':
         results = rate_limit_result['results']
         if results.get('blocking_code') and results.get('requests_sent') == 1:
-            print(f'    [red]❌ Rate Limiting: {results['details']}[/red]')
+            print(f'    [red]❌ Rate Limiting: Blocked Immediately ({results['details']})[/red]')
             print(f'    [yellow]💡 [bold]Advice:[/bold] This is likely due to client fingerprinting (TLS fingerprinting, User-Agent, etc.), not a classic rate limit.[/yellow]')
             print(f'       [yellow]Run the analysis again. A different browser identity will be used, which may not be blocked.[/yellow]')
             print (f'    [yellow]   Otherwise, try the --impersonate flag, it will take longer but is likely to succeed.')
