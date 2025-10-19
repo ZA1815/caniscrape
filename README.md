@@ -35,49 +35,7 @@ caniscrape https://example.com
 ```
 
 ### Example Output
-```
-🔍 Analyzing: https://newegg.com...
-🤖 Checking robots.txt...
-🔬 Analyzing TLS fingerprint...
-⚙️ Analyzing JavaScript rendering...
-🕵️ Analyzing for behavioral traps (default scan)...
-⚔️ Detecting CAPTCHA...
-⏱️ Profiling rate limits with Python client...
-🔍 Running WAF detection...
-
-
-───────────────────────────────────────────────  DIFFICULTY SCORE: 6/10 (Hard)  ───────────────────────────────────────────────
-
-╭───────────────────────╮
-│🛡️  ACTIVE PROTECTIONS │
-╰───────────────────────╯
-    ✅ robots.txt: Website allows scraping (for details on specific pages, navigate to <url>/robots.txt in your browser.)
-    ❌ TLS Fingerprinting: Site blocks standard Python clients but allows browser-like clients.
-    ✅ JavaScript: Not required for main content.
-    ✅ Behavioral Analysis: No obvious honeypot traps detected.
-    ❌ CAPTCHA: Cloudflare Turnstile detected (on page load).
-    ❌ Rate Limiting: Blocked Immediately (Blocked after 1 requests with a 3.0s delay.)
-    💡 Advice: This is likely due to client fingerprinting (TLS fingerprinting, User-Agent, etc.), not a classic rate limit.
-       Run the analysis again. A different browser identity will be used, which may not be blocked.
-       Otherwise, try the --impersonate flag, it will take longer but is likely to succeed.
-    ❌ WAF: Kona SiteDefender by (Akamai)
-
-───────────────────────────────────────────────────── 💡 RECOMMENDATIONS ──────────────────────────────────────────────────────
-
-Required Tools:
-  • A CAPTCHA solving service (e.g., 2Captcha, Anti-Captcha).
-  • A library with browser impersonation like curl_cffi, or a full headless browser.
-  • A pool of high-quality proxies (residential or mobile) to rotate IP addresses.
-
-Scraping Strategy:
-  • Implement delays between requests (e.g., 3-5 seconds).
-  • Integrate the CAPTCHA solver into your script to handle challenges when they appear.
-  • Rotate User-Agents and other headers on every request.
-  • Standard Python HTTP clients (like requests/aiohttp) will be blocked.
-
-────────────────────────────────────────────────────── Analysis Complete ──────────────────────────────────────────────────────
-
-```
+![caniscrape output](https://github.com/user-attachments/assets/59ad9092-9d24-4ec0-8ea1-da4051c3e05e)
 
 ## 🔬 What It Analyzes
 
