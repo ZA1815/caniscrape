@@ -1,6 +1,8 @@
 import click
 from rich import print
 from rich.markup import escape
+from rich.panel import Panel
+from rich.rule import Rule
 from time import sleep
 
 from .analyzers.waf_detector import detect_waf
@@ -9,6 +11,9 @@ from .analyzers.rate_limit_profiler import profile_rate_limits
 from .analyzers.tls_analyzer import analyze_tls_fingerprint
 from .analyzers.js_detector import analyze_js_rendering
 from .analyzers.behavioral_detector import detect_honeypots
+from .analyzers.captcha_detector import detect_captcha
+from .scoring.scoring_engine import calculate_difficulty_score
+from .recommendations.recommender import generate_recommendations
 
 @click.command()
 @click.argument('url')
@@ -40,14 +45,14 @@ def cli(url: str, find_all: bool, impersonate: bool, scan_depth: str | None):
     """
     Analyzes a single URL for scraping difficulty.
     """
-    print(f'Analyzing: [bold blue]{url}[/bold blue]...')
+    print(f'🔍 Analyzing: [bold blue]{url}[/bold blue]...')
 
     if find_all:
         print(f'    [yellow]⚠️  Running with --find-all is aggressive and may trigger rate limits or temporary IP bans.[/yellow]\n')
     if scan_depth == 'thorough':
-        print(f'    [yellow]⚠️  --thorough scan selected. Behavioral analysis may take several minutes on large sites.[/bold yellow]')
+        print(f'    [yellow]⚠️  --thorough scan selected. Behavioral analysis may take several minutes on large sites.[/yellow]')
     if scan_depth == 'deep':
-        print(f'    [yellow]⚠️  --deep scan selected. Behavioral analysis may take 10+ minutes on large sites.[/bold yellow]')
+        print(f'    [yellow]⚠️  --deep scan selected. Behavioral analysis may take 10+ minutes on large sites.[/yellow]')
     if find_all or scan_depth:
         print('    [yellow]You have 5 seconds after the above message(s) to cancel. (Ctrl + C to cancel)[/yellow]')
         sleep(5)
@@ -68,8 +73,11 @@ def cli(url: str, find_all: bool, impersonate: bool, scan_depth: str | None):
         print(f'🕵️  Analyzing for behavioral traps ({scan_depth} scan)...')
     behavioral_result = detect_honeypots(url, scan_depth=scan_depth)
 
+    print('⚔️  Detecting CAPTCHA...')
+    captcha_result = detect_captcha(url)
+
     if impersonate:
-        print('⏱️ Profiling rate limits with browser-like client...')
+        print('⏱️  Profiling rate limits with browser-like client...')
     else:
         print('⏱️  Profiling rate limits with Python client...')
     rate_limit_result = profile_rate_limits(url, crawl_delay, impersonate)
@@ -77,9 +85,26 @@ def cli(url: str, find_all: bool, impersonate: bool, scan_depth: str | None):
     print('🔍 Running WAF detection...')
     waf_result = detect_waf(url, find_all)
 
+    # --- PROCESS INTELLIGENCE WITH THE "BRAIN" ---
+    all_results = {
+        'robots': robots_result,
+        'tls': tls_result,
+        'js': js_result,
+        'behavioral': behavioral_result,
+        'captcha': captcha_result,
+        'rate_limit': rate_limit_result,
+        'waf': waf_result
+    }
+    
+    score_card = calculate_difficulty_score(all_results)
+    recommendations = generate_recommendations(all_results)
 
-    # Start of output
-    print('\n🛡️  PROTECTIONS DETECTED: \n')
+    # --- PRESENT THE FINAL REPORT ---
+    print('\n')
+    print(Rule(f"[bold white on blue] DIFFICULTY SCORE: {score_card['score']}/10 ({score_card['label']}) [/]", style="blue"))
+    print()
+
+    print(Panel.fit("[bold]🛡️  ACTIVE PROTECTIONS[/bold]", style="yellow", border_style="yellow"))
 
     # Robots.txt check
     robots_status = robots_result['status']
@@ -130,6 +155,18 @@ def cli(url: str, find_all: bool, impersonate: bool, scan_depth: str | None):
     else:
         print(f'    [yellow]⚠️  Behavioral Analysis: Test failed. Reason: {behavioral_result['message']}[/yellow]')
 
+    # CAPTCHA check
+    captcha_status = captcha_result['status']
+    if captcha_status == 'success':
+        if captcha_result.get('captcha_detected'):
+            type = captcha_result['captcha_type']
+            trigger = captcha_result['trigger_condition']
+            print(f'    [red]❌ CAPTCHA: {type} detected ({trigger}).[/red]')
+        else:
+            print(f'    [green]✅ CAPTCHA: No CAPTCHA detected during initial analysis.[/green]')
+    else:
+        print(f'    [yellow]⚠️  CAPTCHA: Analysis failed. Reason: {captcha_result['message']}[/yellow]')
+
     # Rate limit check
     rate_limit_status = rate_limit_result['status']
     if rate_limit_status == 'success':
@@ -138,7 +175,7 @@ def cli(url: str, find_all: bool, impersonate: bool, scan_depth: str | None):
             print(f'    [red]❌ Rate Limiting: Blocked Immediately ({results['details']})[/red]')
             print(f'    [yellow]💡 [bold]Advice:[/bold] This is likely due to client fingerprinting (TLS fingerprinting, User-Agent, etc.), not a classic rate limit.[/yellow]')
             print(f'       [yellow]Run the analysis again. A different browser identity will be used, which may not be blocked.[/yellow]')
-            print (f'    [yellow]   Otherwise, try the --impersonate flag, it will take longer but is likely to succeed.')
+            print(f'    [yellow]   Otherwise, try the --impersonate flag, it will take longer but is likely to succeed.[/yellow]')
         else:
             print(f'    [green]✅ Rate Limiting: {results['details']}[/green]')
     else:
@@ -183,9 +220,24 @@ def cli(url: str, find_all: bool, impersonate: bool, scan_depth: str | None):
                 print(f'    [red]❌ WAFs Detected:[/red]')
                 for line in display_lines:
                     print(f'        [red]- {line}[/red]')
-    print('\n')
+    
+    print()
+    print(Rule("[bold]💡 RECOMMENDATIONS[/bold]", style="cyan"))
+    
+    print("\n[bold]Required Tools:[/bold]")
+    if recommendations['tools']:
+        for tool in recommendations['tools']:
+            print(f"  • {tool}")
+    else:
+        print("  • No special tools required.")
+        
+    print("\n[bold]Scraping Strategy:[/bold]")
+    for tip in recommendations['strategy']:
+        print(f"  • {tip}")
 
-    print(f'Analysis complete.')
+    print()
+    print(Rule("[bold]Analysis Complete[/bold]", style="green"))
+    print()
 
 if __name__ == '__main__':
     cli()
