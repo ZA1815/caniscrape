@@ -1,15 +1,17 @@
 import subprocess
-import re
 from ..utils.waf_result_parser import parse_wafw00f_output
 
-def detect_waf(url: str, sample_count = 3) -> dict[str, any]:
+def detect_waf(url: str, find_all: bool = False) -> dict[str, any]:
     """
-    Runs wafw00f multiple times to detect a WAF and parses its output.
-    Returns the WAF names if found, otherwise None.
-    The number of samples is configurable.
+    Runs wafw00f to detect a WAF and parses its output.
+    Returns the WAF name if found, otherwise None.
+    -find-all tag can be used to ask wafw00f to find all the WAFs the website is using.
     """
     try:
         command = ['wafw00f', url]
+
+        if find_all:
+            command.append('-a')
 
         result = subprocess.run(
             command,

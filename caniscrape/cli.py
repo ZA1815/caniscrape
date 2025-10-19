@@ -18,12 +18,18 @@ def cli():
 @cli.command()
 @click.argument('url')
 @click.option(
-    '--waf-samples',
-    default=1,
-    type=int,
-    help='Number of WAF checks. Default is 1. Higher values are more aggressive but are more likely to detect multi-WAF setups.'
+    '--find-all',
+    is_flag=True,
+    default=False,
+    help='Uses --find-all tag for wafw00f. Default is false. Using the flag is aggressive but is more likely to detect multi-WAF setups.'
 )
-def analyze(url: str, waf_samples: int):
+@click.option(
+    '--impersonate',
+    is_flag=True,
+    default=False,
+    help='Switches from using a basic python script to impersonating a real browser (curl_cffi library). Default is False. Impersonating will likely take longer but is more likely to succeed.'
+)
+def analyze(url: str, find_all: bool, impersonate: bool):
     """
     Analyzes a single URL for scraping difficulty.
     """
@@ -36,17 +42,20 @@ def analyze(url: str, waf_samples: int):
     print('🔬 Analyzing TLS fingerprint...')
     tls_result = analyze_tls_fingerprint(url)
 
-    print('⏱️ Profiling rate limits...')
-    rate_limit_result = profile_rate_limits(url, crawl_delay)
+    if impersonate:
+        print('⏱️ Profiling rate limits with browser-like client...')
+    else:
+        print('⏱️ Profiling rate limits with Python client...')
+    rate_limit_result = profile_rate_limits(url, crawl_delay, impersonate)
 
     print('🔍 Running WAF detection...')
 
-    if waf_samples > 1:
-        print(f'[yellow]⚠️  Heads up: Running with {waf_samples} WAF samples is aggressive and may trigger rate limits or temporary IP bans.[/yellow]\n')
+    if find_all:
+        print(f'  [yellow]⚠️  Heads up: Running with --find-all is aggressive and may trigger rate limits or temporary IP bans.[/yellow]\n')
         print('   [yellow]You have 5 seconds after this message to cancel. (Ctrl + C to cancel)[/yellow]')
         sleep(5)
 
-    waf_result = detect_waf(url)
+    waf_result = detect_waf(url, find_all)
 
     # Start of output
     print('\n🛡️  PROTECTIONS DETECTED: \n')
@@ -83,7 +92,7 @@ def analyze(url: str, waf_samples: int):
         if results.get('blocking_code') and results.get('requests_sent') == 1:
             print(f'    [red]❌ Rate Limiting: {results['details']}[/red]')
             print(f'    [yellow]💡 [bold]Advice:[/bold] This is likely due to client fingerprinting (TLS fingerprinting, User-Agent, etc.), not a classic rate limit.[/yellow]')
-            print(f'    [yellow][bold]Recommendation:[/bold] Run the analysis again. A different browser identity will be used, which may not be blocked.[/yellow]')
+            print(f'       [yellow]Run the analysis again. A different browser identity will be used, which may not be blocked.[/yellow]')
         else:
             print(f'    [green]✅ Rate Limiting: {results['details']}[/green]')
     else:
