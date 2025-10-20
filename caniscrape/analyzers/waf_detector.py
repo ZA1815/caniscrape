@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import subprocess
 from ..utils.waf_result_parser import parse_wafw00f_output
 

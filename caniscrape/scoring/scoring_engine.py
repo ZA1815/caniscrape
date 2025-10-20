@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 def calculate_difficulty_score(results: dict[str, any]) -> dict[str, any]:
     """
     Calculates a difficulty score from 0-10 based on the collected analysis results.

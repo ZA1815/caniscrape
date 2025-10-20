@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 import aiohttp
 from curl_cffi.requests import AsyncSession

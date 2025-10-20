@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 def get_impersonate_target(user_agent: str) -> str:
     ua_lower = user_agent.lower()
     

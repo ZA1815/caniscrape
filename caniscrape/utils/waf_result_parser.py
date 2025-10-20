@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import re
 
 ANSI_RE = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')

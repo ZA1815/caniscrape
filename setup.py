@@ -1,3 +1,4 @@
+from __future__ import annotations
 from setuptools import setup, find_packages
 
 with open("README.md", "r", encoding="utf-8") as fh:
@@ -5,7 +6,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setup(
     name='caniscrape',
-    version='0.1.3',
+    version='0.1.4',
     author='Zaid Ahmed',
     author_email='zaahme18@gmail.com',
     description='Analyze website anti-bot protections before you scrape',

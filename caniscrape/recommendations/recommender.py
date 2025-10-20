@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 def generate_recommendations(results: dict[str, any]) -> dict[str, list[str]]:
     """
     Generates a list of required tools and strategy tips based on the analysis.

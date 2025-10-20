@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeoutError
 import math
 import random
