@@ -95,7 +95,7 @@ def cli(url: str, find_all: bool, impersonate: bool, scan_depth: str | None):
         'rate_limit': rate_limit_result,
         'waf': waf_result
     }
-    
+
     score_card = calculate_difficulty_score(all_results)
     recommendations = generate_recommendations(all_results)
 
@@ -122,28 +122,28 @@ def cli(url: str, find_all: bool, impersonate: bool, scan_depth: str | None):
     elif robots_status == 'not_found':
         print('    [green]✅ robots.txt: Website does not have a robots.txt file (no explicit restrictions).[/green]')
     elif robots_status == 'error':
-        print(f'    [yellow]⚠️ robots.txt: Could not be analyzed. Reason: {robots_result['message']}[/yellow]')
+        print(f'    [yellow]⚠️ robots.txt: Could not be analyzed. Reason: {robots_result["message"]}[/yellow]')
 
     # TLS check
     tls_status = tls_result['status']
     if tls_status == 'active':
-        print(f'    [red]❌ TLS Fingerprinting: {tls_result['details']}[/red]')
+        print(f'    [red]❌ TLS Fingerprinting: {tls_result["details"]}[/red]')
     elif tls_status == 'inactive':
-        print(f'    [green]✅ TLS Fingerprinting: {tls_result['details']}[/green]')
+        print(f'    [green]✅ TLS Fingerprinting: {tls_result["details"]}[/green]')
     elif tls_status == 'inconclusive':
-        print(f'    [yellow]⚠️  TLS Fingerprinting: {tls_result['details']}[/yellow]')
+        print(f'    [yellow]⚠️  TLS Fingerprinting: {tls_result["details"]}[/yellow]')
 
     # JS rendering check
     js_status = js_result['status']
     if js_status == 'success':
         if js_result.get('is_spa'):
-            print(f'    [red]❌ JavaScript: Required (React/Vue/Angular SPA). {js_result['content_difference_%']}% of content is missing without JS.[/red]')
+            print(f'    [red]❌ JavaScript: Required (React/Vue/Angular SPA). {js_result["content_difference_%"]}% of content is missing without JS.[/red]')
         elif js_result.get('js_required'):
-            print(f'    [yellow]⚠️  JavaScript: Required for some content. {js_result['content_difference_%']}% of content is missing without JS.[/yellow]')
+            print(f'    [yellow]⚠️  JavaScript: Required for some content. {js_result["content_difference_%"]}% of content is missing without JS.[/yellow]')
         else:
             print(f'    [green]✅ JavaScript: Not required for main content.[/green]')
     else:
-        print(f'    [yellow]⚠️  JavaScript: Analysis failed. Reason: {js_result['message']}[/yellow]')
+        print(f'    [yellow]⚠️  JavaScript: Analysis failed. Reason: {js_result["message"]}[/yellow]')
 
     # Behavioral check
     behavioral_status = behavioral_result['status']
@@ -155,7 +155,7 @@ def cli(url: str, find_all: bool, impersonate: bool, scan_depth: str | None):
         else:
             print(f'    [green]✅ Behavioral Analysis: No obvious honeypot traps detected.[/green]')
     else:
-        print(f'    [yellow]⚠️  Behavioral Analysis: Test failed. Reason: {behavioral_result['message']}[/yellow]')
+        print(f'    [yellow]⚠️  Behavioral Analysis: Test failed. Reason: {behavioral_result["message"]}[/yellow]')
 
     # CAPTCHA check
     captcha_status = captcha_result['status']
@@ -167,19 +167,19 @@ def cli(url: str, find_all: bool, impersonate: bool, scan_depth: str | None):
         else:
             print(f'    [green]✅ CAPTCHA: No CAPTCHA detected during initial analysis.[/green]')
     else:
-        print(f'    [yellow]⚠️  CAPTCHA: Analysis failed. Reason: {captcha_result['message']}[/yellow]')
+        print(f'    [yellow]⚠️  CAPTCHA: Analysis failed. Reason: {captcha_result["message"]}[/yellow]')
 
     # Rate limit check
     rate_limit_status = rate_limit_result['status']
     if rate_limit_status == 'success':
         results = rate_limit_result['results']
         if results.get('blocking_code') and results.get('requests_sent') == 1:
-            print(f'    [red]❌ Rate Limiting: Blocked Immediately ({results['details']})[/red]')
+            print(f'    [red]❌ Rate Limiting: Blocked Immediately ({results["details"]})[/red]')
             print(f'    [yellow]💡 [bold]Advice:[/bold] This is likely due to client fingerprinting (TLS fingerprinting, User-Agent, etc.), not a classic rate limit.[/yellow]')
             print(f'       [yellow]Run the analysis again. A different browser identity will be used, which may not be blocked.[/yellow]')
             print(f'    [yellow]   Otherwise, try the --impersonate flag, it will take longer but is likely to succeed.[/yellow]')
         else:
-            print(f'    [green]✅ Rate Limiting: {results['details']}[/green]')
+            print(f'    [green]✅ Rate Limiting: {results["details"]}[/green]')
     else:
         error_message = rate_limit_result.get('message', 'Unknown error')
         print(f'    [yellow]⚠️  Rate Limiting: Test failed. Reason: {error_message}[/yellow]')
@@ -189,7 +189,7 @@ def cli(url: str, find_all: bool, impersonate: bool, scan_depth: str | None):
 
     if waf_status == 'error':
         message = waf_result.get('message', '')
-        
+
         if message == 'wafw00f missing':
             print('[bold red]Error: "wafw00f" command not found.[/bold red]')
             print('[yellow]To fix this, please follow these steps in your terminal:')
@@ -205,10 +205,10 @@ def cli(url: str, find_all: bool, impersonate: bool, scan_depth: str | None):
 
         if not waf_list:
             print('    [green]✅ No WAF detected.[/green]')
-        
+
         elif len(waf_list) == 1 and waf_list[0][0] == 'Generic WAF':
             print(f'    [blue]ℹ️  WAF: A generic firewall or server security rule might be present (low confidence).[/blue]')
-        
+
         else:
             display_lines = []
             for name, manuf in waf_list:
@@ -222,17 +222,17 @@ def cli(url: str, find_all: bool, impersonate: bool, scan_depth: str | None):
                 print(f'    [red]❌ WAFs Detected:[/red]')
                 for line in display_lines:
                     print(f'        [red]- {line}[/red]')
-    
+
     print()
     print(Rule("[bold]💡 RECOMMENDATIONS[/bold]", style="cyan"))
-    
+
     print("\n[bold]Required Tools:[/bold]")
     if recommendations['tools']:
         for tool in recommendations['tools']:
             print(f"  • {tool}")
     else:
         print("  • No special tools required.")
-        
+
     print("\n[bold]Scraping Strategy:[/bold]")
     for tip in recommendations['strategy']:
         print(f"  • {tip}")
