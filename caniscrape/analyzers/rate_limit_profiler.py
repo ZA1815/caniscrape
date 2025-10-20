@@ -1,5 +1,11 @@
 from __future__ import annotations
 
+import warnings
+import logging
+
+warnings.filterwarnings("ignore", message="Event loop is closed", category=RuntimeWarning)
+logging.getLogger("asyncio").setLevel(logging.CRITICAL)
+
 import asyncio
 import aiohttp
 import random
@@ -76,14 +82,14 @@ async def _run_rate_limit_profiler(url: str, baseline_delay: float, impersonate:
     results['details'] = f'No blocking detected after {results["requests_sent"]} requests.'
     return results
 
-def profile_rate_limits(url: str, crawl_delay: float | None, impersonate: bool = False) -> dict[str, any]:
+async def profile_rate_limits(url: str, crawl_delay: float | None, impersonate: bool = False) -> dict[str, any]:
     """
     Main synchronous entry point. It selects the delay and runs the async profile.
     """
     delay_to_use = crawl_delay if crawl_delay is not None else DEFAULT_DELAY
 
     try:
-        profile_results = asyncio.run(_run_rate_limit_profiler(url, delay_to_use, impersonate))
+        profile_results = await _run_rate_limit_profiler(url, delay_to_use, impersonate)
         return {'status': 'success', 'results': profile_results}
     except Exception as e:
         return {'status': 'error', 'message': str(e)}

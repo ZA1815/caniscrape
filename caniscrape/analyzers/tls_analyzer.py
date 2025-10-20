@@ -40,11 +40,11 @@ async def _run_tls_test(url: str) -> dict[str, any]:
 
     return results
 
-def analyze_tls_fingerprint(url: str) -> dict[str, any]:
+async def analyze_tls_fingerprint(url: str) -> dict[str, any]:
     """
     Main synchronous entry point. It runs the TLS test and interprets the results.
     """
-    test_results = asyncio.run(_run_tls_test(url))
+    test_results = await _run_tls_test(url)
 
     python_blocked = test_results['python_request_blocked']
     browser_blocked = test_results['browser_request_blocked']
