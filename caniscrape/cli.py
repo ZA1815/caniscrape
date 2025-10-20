@@ -6,6 +6,13 @@ from rich.markup import escape
 from rich.panel import Panel
 from rich.rule import Rule
 from time import sleep
+import asyncio
+
+import warnings
+import logging
+
+warnings.filterwarnings("ignore", message="Event loop is closed", category=RuntimeWarning)
+logging.getLogger("asyncio").setLevel(logging.CRITICAL)
 
 from .analyzers.waf_detector import detect_waf
 from .analyzers.robots_checker import check_robots_txt
@@ -64,7 +71,7 @@ def cli(url: str, find_all: bool, impersonate: bool, scan_depth: str | None):
     crawl_delay = robots_result.get('crawl_delay')
 
     print('Analyzing TLS fingerprint...')
-    tls_result = analyze_tls_fingerprint(url)
+    tls_result = asyncio.run(analyze_tls_fingerprint(url))
 
     print('Analyzing JavaScript rendering...')
     js_result = analyze_js_rendering(url)
@@ -82,7 +89,7 @@ def cli(url: str, find_all: bool, impersonate: bool, scan_depth: str | None):
         print('Profiling rate limits with browser-like client...')
     else:
         print('Profiling rate limits with Python client...')
-    rate_limit_result = profile_rate_limits(url, crawl_delay, impersonate)
+    rate_limit_result = asyncio.run(profile_rate_limits(url, crawl_delay, impersonate))
 
     print('Running WAF detection...')
     waf_result = detect_waf(url, find_all)
