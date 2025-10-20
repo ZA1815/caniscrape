@@ -94,7 +94,6 @@ def cli(url: str, find_all: bool, impersonate: bool, scan_depth: str | None):
     print('Running WAF detection...')
     waf_result = detect_waf(url, find_all)
 
-    # --- PROCESS INTELLIGENCE WITH THE "BRAIN" ---
     all_results = {
         'robots': robots_result,
         'tls': tls_result,
@@ -108,7 +107,6 @@ def cli(url: str, find_all: bool, impersonate: bool, scan_depth: str | None):
     score_card = calculate_difficulty_score(all_results)
     recommendations = generate_recommendations(all_results)
 
-    # --- PRESENT THE FINAL REPORT ---
     print('\n')
     print(Rule(f"[bold white on blue] DIFFICULTY SCORE: {score_card['score']}/10 ({score_card['label']}) [/]", style="blue"))
     print()

@@ -28,10 +28,17 @@ def generate_recommendations(results: dict[str, any]) -> dict[str, list[str]]:
         strategy.add('Implement delays between requests (e.g., 3-5 seconds).')
         strategy.add('Rotate User-Agents and other headers on every request.')
     
-    waf_name = results.get('waf', {}).get('wafs', [[None]])[0][0] or ''
-    if 'Cloudflare' in waf_name or 'DataDome' in waf_name or 'PerimeterX' in waf_name:
-        tools.add('A pool of high-quality proxies (residential or mobile) to rotate IP addresses.')
-        strategy.add('Use a high-quality, non-generic User-Agent for all requests.')
+    wafs_list = results.get('waf', {}).get('wafs', [])
+    if wafs_list:
+        first_waf = wafs_list[0]
+        if isinstance(first_waf, dict):
+            waf_name = first_waf.get('name', '')
+        else:
+            waf_name = first_waf[0] if first_waf else ''
+        
+        if 'Cloudflare' in waf_name or 'DataDome' in waf_name or 'PerimeterX' in waf_name:
+            tools.add('A pool of high-quality proxies (residential or mobile) to rotate IP addresses.')
+            strategy.add('Use a high-quality, non-generic User-Agent for all requests.')
 
     if not tools:
         tools.add('Standard HTTP clients (like requests or aiohttp) should be sufficient.')
