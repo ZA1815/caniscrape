@@ -1,5 +1,11 @@
 from __future__ import annotations
 
+import warnings
+import logging
+
+warnings.filterwarnings("ignore", message="Event loop is closed", category=RuntimeWarning)
+logging.getLogger("asyncio").setLevel(logging.CRITICAL)
+
 import asyncio
 import aiohttp
 from curl_cffi.requests import AsyncSession
