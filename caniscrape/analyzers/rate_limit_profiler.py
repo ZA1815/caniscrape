@@ -54,7 +54,7 @@ async def _run_rate_limit_profiler(url: str, baseline_delay: float, impersonate:
 
             if status in BLOCKING_STATUS_CODES:
                 results['blocking_code'] = status
-                results['details'] = f'Blocked after {results['requests_sent']} requests with a {baseline_delay:.1f}s delay.'
+                results['details'] = f'Blocked after {results["requests_sent"]} requests with a {baseline_delay:.1f}s delay.'
                 return results
             
             if i < GENTLE_PROBE_COUNT - 1:
@@ -71,7 +71,7 @@ async def _run_rate_limit_profiler(url: str, baseline_delay: float, impersonate:
                 results['details'] = f'Blocked during a concurrent burst of {BURST_COUNT} requests.'
                 return results
     
-    results['details'] = f'No blocking detected after {results['requests_sent']} requests.'
+    results['details'] = f'No blocking detected after {results["requests_sent"]} requests.'
     return results
 
 def profile_rate_limits(url: str, crawl_delay: float | None, impersonate: bool = False) -> dict[str, any]:
