@@ -1,10 +1,20 @@
-from __future__ import annotations
-
 import re
 
 ANSI_RE = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
 
+GENERIC_PHRASES = {
+    'generic waf',
+    'generic detection',
+    'a waf or some sort of security solution',
+    'a waf',
+    'waf',
+    'some sort of security solution',
+    'security solution',
+    'used'
+}
+
 def clean_text(text: str | None) -> str:
+    """Removes ANSI color codes and normalizes line endings."""
     if not text:
         return ''
     txt = ANSI_RE.sub('', text)
@@ -20,12 +30,9 @@ def parse_wafw00f_output(stdout: str, stderr: str = '') -> list[tuple[str, str |
     results = []
 
     narrative_re = re.compile(
-        r'(?:The site\s+\S+|\[?\+?\]?)\s*'
-        r'(?:is|appears to be|seems to be|might be|probably is|is probably)\s+'
-        r'(?:protected\s+by\s+|behind\s+)?'
-        r'([A-Za-z0-9](?:[A-Za-z0-9\s\-_]*[A-Za-z0-9])?)'
-        r'\s*(?:\(([^\)]+)\))?'
-        r'(?:\s*WAF\.?)?',
+        r'(?:is|behind|protected by)\s+'
+        r'([A-Z][\w\s-]*)(?:\s+\(in\s+)?(?:\s*WAF)?'
+        r'(?:\s*\(([^\)]+)\))?',
         re.IGNORECASE
     )
 
@@ -35,17 +42,22 @@ def parse_wafw00f_output(stdout: str, stderr: str = '') -> list[tuple[str, str |
         if name:
             results.append((name, manuf))
 
-    if not results:
+    filtered_results = [
+        (name, manuf) for name, manuf in results
+        if name.lower().strip() not in GENERIC_PHRASES
+    ]
+
+    if not filtered_results:
         generic_re = re.compile(
             r'generic detection|behind a waf|security solution|protected by',
             re.IGNORECASE
         )
         if generic_re.search(text):
-            results.append(('Generic WAF', None))
+            return [('Generic WAF', None)]
 
     seen = set()
     out = []
-    for name, manuf in results:
+    for name, manuf in filtered_results:
         key = (name.lower(), (manuf or '').lower())
         if key not in seen:
             seen.add(key)
