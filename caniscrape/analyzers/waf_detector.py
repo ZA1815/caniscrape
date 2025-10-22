@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import subprocess
 from ..utils.waf_result_parser import parse_wafw00f_output
+import random
 
-def detect_waf(url: str, find_all: bool = False) -> dict[str, any]:
+def detect_waf(url: str, find_all: bool = False, proxies: tuple[str, ...] = ()) -> dict[str, any]:
     """
     Runs wafw00f to detect a WAF and parses its output.
     Returns the WAF name if found, otherwise None.
@@ -14,6 +15,10 @@ def detect_waf(url: str, find_all: bool = False) -> dict[str, any]:
 
         if find_all:
             command.append('-a')
+
+        if proxies:
+            proxy = random.choice(proxies)
+            command.extend(['-p', proxy])
 
         result = subprocess.run(
             command,

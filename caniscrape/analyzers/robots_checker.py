@@ -2,8 +2,13 @@ from __future__ import annotations
 
 import requests
 from urllib.parse import urlparse, urlunparse
+import random
+from curl_cffi.requests import Session as CurlCffiSession
 
-def check_robots_txt(url: str) -> dict[str, any]:
+from ..utils.browser_identities import MODERN_BROWSER_IDENTITIES
+from ..utils.impersonate_target import get_impersonate_target
+
+def check_robots_txt(url: str, proxies: tuple[str, ...] = ()) -> dict[str, any]:
     """
     Fetches and parses robots.txt to check for scraping directives.
     Returns crawl delay and whether scraping is disallowed for all user agents.
@@ -12,8 +17,17 @@ def check_robots_txt(url: str) -> dict[str, any]:
         parsed_url = urlparse(url)
         robots_url = urlunparse((parsed_url.scheme, parsed_url.netloc, 'robots.txt', '', '', ''))
 
-        headers = {'User-Agent': 'Mozilla/5.0 (compatible; caniscrape-bot/1.0)'}
-        response = requests.get(robots_url, timeout=10, headers=headers, allow_redirects=True)
+        proxies_dict = None
+        if proxies:
+            proxy = random.choice(proxies)
+            proxies_dict = {'http': proxy, 'https': proxy}
+
+        chosen_identity = random.choice(MODERN_BROWSER_IDENTITIES)
+        user_agent = chosen_identity.get('User-Agent', '')
+        impersonate_target = get_impersonate_target(user_agent)
+
+        with CurlCffiSession(impersonate=impersonate_target, proxies=proxies_dict) as session:
+            response = session.get(robots_url, headers=chosen_identity, timeout=15, allow_redirects=True)
 
         if response.status_code == 200:
             if 'text/html' in response.headers.get('Content-Type', '').lower():

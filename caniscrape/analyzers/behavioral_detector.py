@@ -10,13 +10,18 @@ TEST_IDENTITY = random.choice(MODERN_BROWSER_IDENTITIES)
 
 HONEYPOT_THRESHOLD = 3
 
-def detect_honeypots(url: str, scan_depth: str = 'default') -> dict[str, any]:
+def detect_honeypots(url: str, scan_depth: str = 'default', proxies: tuple[str, ...] = ()) -> dict[str, any]:
     """
     Launches a headless browser to analyze a page for honeypots, which are traps for bots.
     """
     try:
         with sync_playwright() as p:
-            browser = p.chromium.launch(headless=True)
+            launch_options = {'headless': True}
+            if proxies:
+                proxy = random.choice(proxies)
+                launch_options['proxy'] = {'server': proxy}\
+                
+            browser = p.chromium.launch(**launch_options)
             page = browser.new_page(extra_http_headers=TEST_IDENTITY)
 
             page.goto(url, wait_until='domcontentloaded', timeout=30000)

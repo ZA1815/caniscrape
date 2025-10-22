@@ -50,10 +50,33 @@ from .recommendations.recommender import generate_recommendations
     flag_value='deep',
     help='Makes the behavioral detector scan through all the links. Will give excellent accuracy in detecing honeypots but is very slow on large sites.'
 )
-def cli(url: str, find_all: bool, impersonate: bool, scan_depth: str | None):
+@click.option(
+    '--proxy',
+    'proxies',
+    multiple=True,
+    type=str,
+    help='Proxy to use for requests. Can be used multiple times to create a rotation pool.'
+)
+@click.option(
+    '--captcha-service',
+    type=click.Choice(['capsolver', '2captcha'], case_sensitive=False),
+    default=None,
+    help='The CAPTCHA solving service to use (optional).'
+)
+@click.option(
+    '--captcha-api-key',
+    type=str,
+    default=None,
+    help='API key for the selected CAPTCHA solving service.'
+)
+def cli(url: str, find_all: bool, impersonate: bool, scan_depth: str | None, proxies: tuple[str, ...], captcha_service: str | None, captcha_api_key: str | None, ):
     """
     Analyzes a single URL for scraping difficulty.
     """
+    if not url.startswith(('http://', 'https://')):
+        url = f'http://{url}'
+        print(f"[yellow]⚠️  URL scheme missing. Assuming 'http://'. Analyzing: [bold blue]{url}[/bold blue]...[/yellow]")
+
     print(f'🔍 Analyzing: [bold blue]{url}[/bold blue]...')
 
     if find_all:
@@ -67,32 +90,32 @@ def cli(url: str, find_all: bool, impersonate: bool, scan_depth: str | None):
         sleep(5)
 
     print('Checking robots.txt...')
-    robots_result = check_robots_txt(url)
+    robots_result = check_robots_txt(url, proxies=proxies)
     crawl_delay = robots_result.get('crawl_delay')
 
     print('Analyzing TLS fingerprint...')
-    tls_result = asyncio.run(analyze_tls_fingerprint(url))
+    tls_result = asyncio.run(analyze_tls_fingerprint(url, proxies=proxies))
 
     print('Analyzing JavaScript rendering...')
-    js_result = analyze_js_rendering(url)
+    js_result = analyze_js_rendering(url, proxies=proxies)
 
     if scan_depth is None:
         print('Analyzing for behavioral traps (default scan)...')
     else:
         print(f'Analyzing for behavioral traps ({scan_depth} scan)...')
-    behavioral_result = detect_honeypots(url, scan_depth=scan_depth)
+    behavioral_result = detect_honeypots(url, scan_depth=scan_depth, proxies=proxies)
 
     print('Detecting CAPTCHA...')
-    captcha_result = detect_captcha(url)
+    captcha_result = detect_captcha(url, service_name=captcha_service, api_key=captcha_api_key, proxies=proxies)
 
     if impersonate:
         print('Profiling rate limits with browser-like client...')
     else:
         print('Profiling rate limits with Python client...')
-    rate_limit_result = asyncio.run(profile_rate_limits(url, crawl_delay, impersonate))
+    rate_limit_result = asyncio.run(profile_rate_limits(url, crawl_delay, impersonate, proxies=proxies))
 
     print('Running WAF detection...')
-    waf_result = detect_waf(url, find_all)
+    waf_result = detect_waf(url, find_all, proxies=proxies)
 
     all_results = {
         'robots': robots_result,
@@ -129,7 +152,7 @@ def cli(url: str, find_all: bool, impersonate: bool, scan_depth: str | None):
     elif robots_status == 'not_found':
         print('    [green]✅ robots.txt: Website does not have a robots.txt file (no explicit restrictions).[/green]')
     elif robots_status == 'error':
-        print(f'    [yellow]⚠️ robots.txt: Could not be analyzed. Reason: {robots_result["message"]}[/yellow]')
+        print(f'    [yellow]⚠️  robots.txt: Could not be analyzed. Reason: {robots_result["message"]}[/yellow]')
 
     # TLS check
     tls_status = tls_result['status']
@@ -171,6 +194,12 @@ def cli(url: str, find_all: bool, impersonate: bool, scan_depth: str | None):
             type = captcha_result['captcha_type']
             trigger = captcha_result['trigger_condition']
             print(f'    [red]❌ CAPTCHA: {type} detected ({trigger}).[/red]')
+            if captcha_result.get('solve_status') == 'solved':
+                print(f'        [green]✅ {captcha_result["details"]}[/green]')
+            elif captcha_result.get('solve_status') == 'failed':
+                print(f'        [red]❌ {captcha_result["details"]}[/red]')
+            else:
+                print(f'        [blue]ℹ️  {captcha_result["details"]}[/blue]')
         else:
             print(f'    [green]✅ CAPTCHA: No CAPTCHA detected during initial analysis.[/green]')
     else:

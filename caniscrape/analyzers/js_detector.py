@@ -26,21 +26,28 @@ def _extract_visible_text(html_content: str) -> str:
     chunks = (phrase.strip() for line in lines for phrase in line.split(' '))
     return '\n'.join(chunk for chunk in chunks if chunk)
 
-def analyze_js_rendering(url: str) -> dict[str, any]:
+def analyze_js_rendering(url: str, proxies: tuple[str, ...] = ()) -> dict[str, any]:
     """
     Analyzes a URL to determine if JavaScript is required to render its main content.
     """
     user_agent = TEST_IDENTITY.get('User-Agent', '')
     impersonate_target = get_impersonate_target(user_agent)
+
+    proxy = random.choice(proxies) if proxies else None
+    proxies_dict = {"http": proxy, "https": proxy} if proxy else None
     try:
-        with CurlCffiSession(impersonate=impersonate_target) as session:
+        with CurlCffiSession(impersonate=impersonate_target, proxies=proxies_dict) as session:
             no_js_response = session.get(url, headers=TEST_IDENTITY, timeout=30)
             no_js_response.raise_for_status()
             no_js_text = _extract_visible_text(no_js_response.text)
             len_no_js = len(no_js_text)
 
         with sync_playwright() as p:
-            browser = p.chromium.launch(headless=True)
+            launch_options = {'headless': True}
+            if proxy:
+                launch_options['proxy'] = {'server': proxy}
+
+            browser = p.chromium.launch(**launch_options)
             page = browser.new_page(extra_http_headers=TEST_IDENTITY)
             
             try:
