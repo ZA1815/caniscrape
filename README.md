@@ -12,6 +12,8 @@ Stop wasting hours building scrapers only to discover the site has Cloudflare + 
 - **Difficulty score** (0-10 scale: Easy → Very Hard)
 - **Specific recommendations** on what tools/proxies you'll need
 - **Estimated complexity** so you can decide: build it yourself or use a service
+- **CAPTCHA solving capability** (NEW in v0.2.0)
+- **Proxy rotation support** (NEW in v0.2.0)
 
 ## 🚀 Quick Start
 
@@ -52,10 +54,11 @@ Identifies Web Application Firewalls (Cloudflare, Akamai, Imperva, DataDome, Per
 - Detects SPAs (React, Vue, Angular)
 - Calculates percentage of content missing without JS
 
-### 4. **CAPTCHA Detection**
+### 4. **CAPTCHA Detection & Solving**
 - Scans for reCAPTCHA, hCaptcha, Cloudflare Turnstile
 - Tests if CAPTCHA appears on load or after rate limiting
 - Monitors network traffic for challenge endpoints
+- **NEW**: Attempt to solve detected CAPTCHAs using Capsolver or 2Captcha
 
 ### 5. **TLS Fingerprinting**
 - Compares standard Python clients vs browser-like clients
@@ -92,9 +95,53 @@ caniscrape https://example.com --thorough
 caniscrape https://example.com --deep
 ```
 
+### Proxy Rotation (NEW in v0.2.0)
+```bash
+# Use a single proxy
+caniscrape https://example.com --proxy "http://user:pass@host:port"
+
+# Use multiple proxies (random rotation)
+caniscrape https://example.com \
+  --proxy "http://user:pass@host1:port" \
+  --proxy "socks5://user:pass@host2:port" \
+  --proxy "http://host3:port"
+```
+
+**Proxy rotation features:**
+- Supports `http` and `socks5` protocols
+- Randomly rotates through proxy pool for each request
+- Works with all analyzers including WAF detection and headless browser sessions
+- Helps bypass basic IP-based blocks and rate limits
+
+### CAPTCHA Solving (NEW in v0.2.0)
+```bash
+# Detect and attempt to solve CAPTCHAs
+caniscrape https://example.com \
+  --captcha-service capsolver \
+  --captcha-api-key "YOUR_API_KEY"
+
+# Supported services: capsolver, 2captcha
+caniscrape https://example.com \
+  --captcha-service 2captcha \
+  --captcha-api-key "YOUR_API_KEY"
+```
+
+**CAPTCHA solving notes:**
+- By default, `caniscrape` only detects CAPTCHAs
+- To attempt solving, you must provide `--captcha-service` and `--captcha-api-key`
+- Only attempts solving if a CAPTCHA is detected
+- Provides deeper analysis of site defenses when solving is enabled
+
 ### Combine Options
 ```bash
-caniscrape https://example.com --impersonate --find-all --thorough
+caniscrape https://example.com \
+  --impersonate \
+  --find-all \
+  --thorough \
+  --proxy "http://proxy1:port" \
+  --proxy "http://proxy2:port" \
+  --captcha-service capsolver \
+  --captcha-api-key "YOUR_KEY"
 ```
 
 ## 📊 Difficulty Scoring
@@ -160,14 +207,48 @@ External tools (install separately):
 - **Before building a scraper**: Check if it's even feasible
 - **Debugging scraper issues**: Identify what protection broke your scraper
 - **Client estimates**: Give accurate time/cost estimates for scraping projects
+- **Proxy testing**: Verify your proxy pool works against target sites
+- **CAPTCHA assessment**: Determine if CAPTCHA solving is required
 
 ### For Data Engineers
 - **Pipeline planning**: Know what infrastructure you'll need (proxies, CAPTCHA solvers)
 - **Cost estimation**: Calculate proxy/CAPTCHA costs before committing to a data source
+- **Vendor selection**: Test different proxy and CAPTCHA solving services
 
 ### For Researchers
 - **Site selection**: Find the easiest data sources for your research
 - **Compliance**: Check robots.txt before scraping
+- **Anonymity**: Test data collection through proxy infrastructure
+
+## 🆕 What's New in v0.2.0 (Beta)
+
+This is a **beta release** introducing two major features:
+
+### 1. Integrated CAPTCHA Solving
+- Attempt to solve detected CAPTCHAs using third-party services
+- Supported services: Capsolver, 2Captcha
+- Provides deeper analysis when solving is enabled
+- Only attempts solving if CAPTCHA is detected
+
+### 2. Full Proxy Support & Rotation
+- Route all requests through proxies
+- Create proxy rotation pools for better anonymity
+- Supports HTTP and SOCKS5 protocols
+- Works across all analyzers including WAF detection and browser sessions
+
+### 3. Additional Improvements
+- **Smarter URL handling**: Automatically adds `http://` to URLs missing a scheme
+- **Bug fixes**: Numerous stability and error-handling improvements
+- **Better error messages**: More informative output when things go wrong
+
+### 🧪 Beta Testing
+We need your help to stabilize these features! Please:
+- Test proxy rotation with different proxy providers
+- Test CAPTCHA solving with Capsolver and 2Captcha
+- Report any bugs, crashes, or unexpected behavior
+- Provide feedback on the new features
+
+The next update (v0.3.0) will focus on improving detection for tough sites like Amazon and YouTube.
 
 ## ⚠️ Limitations & Disclaimers
 
@@ -180,12 +261,16 @@ External tools (install separately):
 - This tool is for **reconnaissance only** - it does not bypass protections
 - Always respect `robots.txt` and terms of service
 - Some sites may consider aggressive scanning hostile - use `--find-all` and `--deep` sparingly
+- CAPTCHA solving should only be used for legitimate testing purposes
 - You are responsible for how you use this tool and any scrapers you build
+- Ensure your use of proxies and CAPTCHA solving complies with applicable laws and terms of service
 
 ### Technical Notes
-- Analysis takes 30-60 seconds per URL
+- Analysis takes 30-60 seconds per URL (longer with CAPTCHA solving)
 - Some checks require making multiple requests (may trigger rate limits)
 - Results are a snapshot - protections can change over time
+- Proxy rotation adds latency but improves anonymity
+- CAPTCHA solving success depends on service quality and site complexity
 
 ## 🤝 Contributing
 
