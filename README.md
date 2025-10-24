@@ -8,12 +8,14 @@ Stop wasting hours building scrapers only to discover the site has Cloudflare + 
 
 `caniscrape` analyzes a URL and tells you:
 
-- **What protections are active** (WAF, CAPTCHA, rate limits, TLS fingerprinting, honeypots)
+- **What protections are active** (WAF, CAPTCHA, rate limits, TLS fingerprinting, honeypots, bot detection services)
 - **Difficulty score** (0-10 scale: Easy → Very Hard)
 - **Specific recommendations** on what tools/proxies you'll need
 - **Estimated complexity** so you can decide: build it yourself or use a service
-- **CAPTCHA solving capability** (NEW in v0.2.0)
-- **Proxy rotation support** (NEW in v0.2.0)
+- **Advanced fingerprinting detection** (NEW in v0.3.0)
+- **Browser integrity analysis** (NEW in v0.3.0)
+- **CAPTCHA solving capability** (v0.2.0)
+- **Proxy rotation support** (v0.2.0)
 
 ## 🚀 Quick Start
 
@@ -37,7 +39,7 @@ caniscrape https://example.com
 ```
 
 ### Example Output
-![caniscrape output](https://github.com/user-attachments/assets/59ad9092-9d24-4ec0-8ea1-da4051c3e05e)
+![caniscrape output](https://github.com/user-attachments/assets/ca805834-b3fe-4bf9-aae7-23194d15a9c8)
 
 ## 🔬 What It Analyzes
 
@@ -58,7 +60,7 @@ Identifies Web Application Firewalls (Cloudflare, Akamai, Imperva, DataDome, Per
 - Scans for reCAPTCHA, hCaptcha, Cloudflare Turnstile
 - Tests if CAPTCHA appears on load or after rate limiting
 - Monitors network traffic for challenge endpoints
-- **NEW**: Attempt to solve detected CAPTCHAs using Capsolver or 2Captcha
+- Attempt to solve detected CAPTCHAs using Capsolver or 2Captcha
 
 ### 5. **TLS Fingerprinting**
 - Compares standard Python clients vs browser-like clients
@@ -68,7 +70,19 @@ Identifies Web Application Firewalls (Cloudflare, Akamai, Imperva, DataDome, Per
 - Scans for invisible "honeypot" links (bot traps)
 - Detects if site is monitoring mouse/scroll behavior
 
-### 7. **robots.txt**
+### 7. **Advanced Fingerprinting Detection** ✨ NEW in v0.3.0
+- Identifies enterprise bot detection services (PerimeterX, DataDome, Akamai Bot Manager, etc.)
+- Detects canvas fingerprinting attempts
+- Monitors which user events are being tracked (mouse, keyboard, scroll)
+- Catches client-side bot detection that traditional tools miss
+
+### 8. **Browser Integrity Analysis** ✨ NEW in v0.3.0
+- Forensic-level check of browser function modifications
+- Detects tampering with canvas APIs, timing functions
+- Identifies anti-debugging techniques
+- Explains what each modification indicates (fingerprinting, evasion detection, etc.)
+
+### 9. **robots.txt**
 - Checks scraping permissions
 - Extracts recommended crawl-delay
 
@@ -95,7 +109,7 @@ caniscrape https://example.com --thorough
 caniscrape https://example.com --deep
 ```
 
-### Proxy Rotation (NEW in v0.2.0)
+### Proxy Rotation
 ```bash
 # Use a single proxy
 caniscrape https://example.com --proxy "http://user:pass@host:port"
@@ -113,7 +127,7 @@ caniscrape https://example.com \
 - Works with all analyzers including WAF detection and headless browser sessions
 - Helps bypass basic IP-based blocks and rate limits
 
-### CAPTCHA Solving (NEW in v0.2.0)
+### CAPTCHA Solving
 ```bash
 # Detect and attempt to solve CAPTCHAs
 caniscrape https://example.com \
@@ -155,8 +169,12 @@ The tool calculates a 0-10 difficulty score based on:
 | **DataDome/PerimeterX WAF** | +4 points |
 | **Akamai/Imperva WAF** | +3 points |
 | **Aggressive rate limiting** | +3 points |
+| **High-tier bot detection** (PerimeterX, DataDome, etc.) | +2 points |
 | **Cloudflare WAF** | +2 points |
 | **Honeypot traps detected** | +2 points |
+| **Canvas fingerprinting** | +1 point |
+| **Browser function modifications** | +1 point |
+| **Medium-tier bot detection** | +1 point |
 | **TLS fingerprinting active** | +1 point |
 
 **Score interpretation:**
@@ -209,46 +227,50 @@ External tools (install separately):
 - **Client estimates**: Give accurate time/cost estimates for scraping projects
 - **Proxy testing**: Verify your proxy pool works against target sites
 - **CAPTCHA assessment**: Determine if CAPTCHA solving is required
+- **Fingerprinting analysis**: Understand which evasion techniques you'll need
 
 ### For Data Engineers
-- **Pipeline planning**: Know what infrastructure you'll need (proxies, CAPTCHA solvers)
+- **Pipeline planning**: Know what infrastructure you'll need (proxies, CAPTCHA solvers, anti-detection tools)
 - **Cost estimation**: Calculate proxy/CAPTCHA costs before committing to a data source
 - **Vendor selection**: Test different proxy and CAPTCHA solving services
+- **Protection monitoring**: Track when sites upgrade their bot detection
 
 ### For Researchers
 - **Site selection**: Find the easiest data sources for your research
 - **Compliance**: Check robots.txt before scraping
 - **Anonymity**: Test data collection through proxy infrastructure
+- **Evasion research**: Study real-world bot detection implementations
 
-## 🆕 What's New in v0.2.0 (Beta)
+## 🆕 What's New in v0.3.0
 
-This is a **beta release** introducing two major features:
+This release introduces **forensic-level fingerprinting detection** that reveals sophisticated, client-side protections traditional tools miss.
 
-### 1. Integrated CAPTCHA Solving
-- Attempt to solve detected CAPTCHAs using third-party services
-- Supported services: Capsolver, 2Captcha
-- Provides deeper analysis when solving is enabled
-- Only attempts solving if CAPTCHA is detected
+### 1. Advanced Fingerprinting Detection
+- Detects enterprise bot detection services (PerimeterX, DataDome, Akamai, Kasada, Shape Security, etc.)
+- Identifies canvas fingerprinting attempts
+- Monitors behavioral tracking (which user events the site listens to)
+- Operates in the browser to catch protections that only activate client-side
 
-### 2. Full Proxy Support & Rotation
-- Route all requests through proxies
-- Create proxy rotation pools for better anonymity
-- Supports HTTP and SOCKS5 protocols
-- Works across all analyzers including WAF detection and browser sessions
+### 2. Browser Integrity Analysis
+- Compares critical browser functions against a clean baseline
+- Detects function tampering for canvas APIs, network hooks, timing functions
+- Explains what each modification indicates (fingerprinting type, evasion detection method)
+- Forensic-level insight into how sites are trying to detect bots
 
-### 3. Additional Improvements
-- **Smarter URL handling**: Automatically adds `http://` to URLs missing a scheme
-- **Bug fixes**: Numerous stability and error-handling improvements
-- **Better error messages**: More informative output when things go wrong
+### 3. Smarter Scoring & Recommendations
+- Updated scoring to account for advanced protections
+- No double-counting of Cloudflare detections
+- Tiered bot detection scoring (high-tier vs medium-tier services)
+- Recommendations now include specific anti-detection tools and evasion techniques
 
-### 🧪 Beta Testing
-We need your help to stabilize these features! Please:
-- Test proxy rotation with different proxy providers
-- Test CAPTCHA solving with Capsolver and 2Captcha
-- Report any bugs, crashes, or unexpected behavior
-- Provide feedback on the new features
+### 4. Performance & Stability
+- Better error handling across all analyzers
+- More informative error messages
+- Optimized fingerprinting detection speed
 
-The next update (v0.3.0) will focus on improving detection for tough sites like Amazon and YouTube.
+**Previous updates:**
+- **v0.2.0**: Added proxy rotation and CAPTCHA solving capabilities
+- **v0.1.0**: Initial release with core detection features
 
 ## ⚠️ Limitations & Disclaimers
 
@@ -256,6 +278,7 @@ The next update (v0.3.0) will focus on improving detection for tough sites like 
 - **Dynamic protections**: Some sites only trigger defenses under specific conditions
 - **Behavioral AI**: Advanced ML-based bot detection that adapts in real-time
 - **Account-based restrictions**: Protections that only activate for logged-in users
+- **Obfuscated custom solutions**: Proprietary detection systems with heavy code obfuscation
 
 ### Legal & Ethical Notes
 - This tool is for **reconnaissance only** - it does not bypass protections
@@ -271,6 +294,7 @@ The next update (v0.3.0) will focus on improving detection for tough sites like 
 - Results are a snapshot - protections can change over time
 - Proxy rotation adds latency but improves anonymity
 - CAPTCHA solving success depends on service quality and site complexity
+- Fingerprinting detection requires JavaScript execution (uses Playwright)
 
 ## 🤝 Contributing
 
