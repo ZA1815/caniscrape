@@ -21,6 +21,8 @@ from .analyzers.tls_analyzer import analyze_tls_fingerprint
 from .analyzers.js_detector import analyze_js_rendering
 from .analyzers.behavioral_detector import detect_honeypots
 from .analyzers.captcha_detector import detect_captcha
+from .analyzers.fingerprint_analyzer import analyze_fingerprinting
+from .analyzers.integrity_analyzer import analyze_function_integrity
 from .scoring.scoring_engine import calculate_difficulty_score
 from .recommendations.recommender import generate_recommendations
 
@@ -96,6 +98,12 @@ def cli(url: str, find_all: bool, impersonate: bool, scan_depth: str | None, pro
     print('Analyzing TLS fingerprint...')
     tls_result = asyncio.run(analyze_tls_fingerprint(url, proxies=proxies))
 
+    print('Analyzing for advanced fingerprinting...')
+    fingerprint_result = analyze_fingerprinting(url, proxies=proxies)
+
+    print('Performing function integrity analysis...')
+    integrity_result = analyze_function_integrity(url, proxies=proxies)
+
     print('Analyzing JavaScript rendering...')
     js_result = analyze_js_rendering(url, proxies=proxies)
 
@@ -124,7 +132,9 @@ def cli(url: str, find_all: bool, impersonate: bool, scan_depth: str | None, pro
         'behavioral': behavioral_result,
         'captcha': captcha_result,
         'rate_limit': rate_limit_result,
-        'waf': waf_result
+        'waf': waf_result,
+        'fingerprint': fingerprint_result,
+        'integrity': integrity_result
     }
 
     score_card = calculate_difficulty_score(all_results)
@@ -162,6 +172,52 @@ def cli(url: str, find_all: bool, impersonate: bool, scan_depth: str | None, pro
         print(f'    [green]✅ TLS Fingerprinting: {tls_result["details"]}[/green]')
     elif tls_status == 'inconclusive':
         print(f'    [yellow]⚠️  TLS Fingerprinting: {tls_result["details"]}[/yellow]')
+
+    # Advanced fingerprinting check
+    fingerprint_status = fingerprint_result['status']
+    if fingerprint_status == 'success':
+        red_flags = []
+        yellow_flags = []
+
+        if fingerprint_result['detected_services']:
+            services = ', '.join(fingerprint_result['detected_services'])
+            red_flags.append(f'Known Services Found: {services}')
+
+        if fingerprint_result['canvas_fingerprinting_signal']:
+            yellow_flags.append('Canvas Fingerprinting Suspected (canvas function is not native)')
+
+        if fingerprint_result['behavioral_listeners_detected']:
+            listeners = ', '.join(fingerprint_result['behavioral_listeners_detected'])
+            yellow_flags.append(f'Behavioral Tracking Suspected (listeners found for: {listeners})')
+
+        if red_flags:
+            print('    [red]❌ Advanced Bot Detection:[/red]')
+            for flag in red_flags:
+                print(f'    [red]- {flag}[/red]')
+        
+        elif yellow_flags:
+            print('    [yellow]⚠️  Suspicious Signals:[/yellow]')
+            for flag in yellow_flags:
+                print(f'    [yellow]- {flag}[/yellow]')
+        
+        else:
+            print('    [green]✅ Advanced Bot Detection: No obvious fingerprinting services or signals detected.[/green]')
+    else:
+        print(f'    [yellow]⚠️  Fingerprinting: Analysis failed. Reason: {fingerprint_result["message"]}[/yellow]')
+
+    # Integrity check
+    integrity_status = integrity_result['status']
+    if integrity_status == 'success':
+        modified_funcs = integrity_result.get('modified_functions', {})
+        if modified_funcs:
+            print('    [red]❌ Browser Integrity Compromised:[/red]')
+            for func, reason in modified_funcs.items():
+                print(f'    [red]- Function "{func}" was modified.[/red]')
+                print(f'      [red]Reason: {reason}[/red]')
+        else:
+            print('    [green]✅ Browser Integrity: No modifications detected.[/green]')
+    else:
+        print(f'    [yellow]⚠️  Integrity Analysis: Test failed. Reason: {integrity_result["message"]}[/yellow]')
 
     # JS rendering check
     js_status = js_result['status']
