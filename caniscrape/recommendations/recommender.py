@@ -16,7 +16,7 @@ def generate_recommendations(results: dict[str, any]) -> dict[str, list[str]]:
         strategy.add('Standard Python HTTP clients (like requests/aiohttp) will be blocked.')
 
     if results.get('captcha', {}).get('captcha_detected'):
-        tools.add('A CAPTCHA solving service (e.g., 2Captcha, Anti-Captcha).')
+        tools.add('A CAPTCHA solving service (e.g., 2Captcha, Capsolver, Anti-Captcha).')
         strategy.add('Integrate the CAPTCHA solver into your script to handle challenges when they appear.')
 
     if results.get('behavioral', {}).get('honeypot_detected'):
@@ -39,6 +39,41 @@ def generate_recommendations(results: dict[str, any]) -> dict[str, list[str]]:
         if 'Cloudflare' in waf_name or 'DataDome' in waf_name or 'PerimeterX' in waf_name:
             tools.add('A pool of high-quality proxies (residential or mobile) to rotate IP addresses.')
             strategy.add('Use a high-quality, non-generic User-Agent for all requests.')
+
+    fingerprint_results = results.get('fingerprint', {})
+    if fingerprint_results.get('status') == 'success':
+        detected_services = fingerprint_results.get('detected_services', [])
+        behavioral_listeners = fingerprint_results.get('behavioral_listeners_detected', [])
+        canvas_signal = fingerprint_results.get('canvas_fingerprinting_signal', False)
+        
+        if detected_services:
+            services_str = ', '.join(detected_services)
+            strategy.add(f'Site uses advanced bot detection ({services_str}). Use undetected-chromedriver or playwright-stealth.')
+            tools.add('An anti-detection browser automation library (e.g., undetected-chromedriver, playwright-stealth).')
+        
+        if behavioral_listeners:
+            strategy.add('Site monitors user behavior (mouse, keyboard, scroll). Simulate realistic human-like movements.')
+            strategy.add('Add random delays and jitter between actions to appear more human.')
+        
+        if canvas_signal:
+            strategy.add('Canvas fingerprinting detected. Use a browser automation tool with built-in evasion (not basic requests).')
+
+    integrity_results = results.get('integrity', {})
+    if integrity_results.get('status') == 'success':
+        modified_functions = integrity_results.get('modified_functions', {})
+        
+        if modified_functions:
+            has_canvas_mods = any('Canvas' in func for func in modified_functions.keys())
+            has_timing_mods = any('Date.now' in func or 'performance.now' in func for func in modified_functions.keys())
+            
+            if has_canvas_mods:
+                strategy.add('Site modifies canvas functions (strong fingerprinting). Avoid basic automation libraries.')
+            
+            if has_timing_mods:
+                strategy.add('Site monitors timing patterns. Vary your request timing to appear less robotic.')
+            
+            if not (has_canvas_mods or has_timing_mods):
+                strategy.add('Site modifies browser functions. Use advanced evasion techniques and test thoroughly.')
 
     if not tools:
         tools.add('Standard HTTP clients (like requests or aiohttp) should be sufficient.')

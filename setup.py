@@ -6,7 +6,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setup(
     name='caniscrape',
-    version='0.2.0',
+    version='0.3.0',
     author='Zaid Ahmed',
     author_email='zaahme18@gmail.com',
     description='Analyze website anti-bot protections before you scrape',
@@ -24,6 +24,7 @@ setup(
         'Programming Language :: Python :: 3.10',
         'Programming Language :: Python :: 3.11',
         'Programming Language :: Python :: 3.12',
+        'Programming Language :: Python :: 3.13'
     ],
     python_requires='>=3.9',
     install_requires=[
