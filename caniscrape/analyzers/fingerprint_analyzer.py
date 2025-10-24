@@ -110,7 +110,6 @@ def analyze_fingerprinting(url: str, proxies: tuple[str, ...] = ()) ->  dict[str
             static_probes = page.evaluate(f"""
             () => {{
                 const results = {{
-                    webdriver: navigator.webdriver,
                     canvas_patched: HTMLCanvasElement.prototype.toDataURL.toString().indexOf('native code') === -1,
                     found_globals: []
                 }};
