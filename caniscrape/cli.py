@@ -3,10 +3,10 @@ from __future__ import annotations
 import click
 from rich import print
 from rich.markup import escape
-from rich.panel import Panel
 from rich.rule import Rule
 from time import sleep
 import asyncio
+from datetime import datetime
 
 import warnings
 import logging
@@ -26,7 +26,161 @@ from .analyzers.integrity_analyzer import analyze_function_integrity
 from .scoring.scoring_engine import calculate_difficulty_score
 from .recommendations.recommender import generate_recommendations
 
-@click.command()
+from .upload_handler import try_upload_scan, check_for_diff
+from .diff import compare_scans, display_diff, should_show_diff
+from .commands.init import init_command
+from .commands.push import push_command
+from .commands.telemetry_push import telemetry_push_command
+from .commands.telemetry import telemetry_command
+from .commands.config_cmd import set_config_command, show_config_command
+from .commands.link import link_command
+from .telemetry import get_telemetry_manager
+from .config import find_config_in_parents
+from .upload_handler import save_to_cache
+
+__version__ = '1.0.0'
+
+@click.group(invoke_without_command=True)
+@click.pass_context
+def cli(ctx):
+    """
+    Examples:
+        caniscrape https://example.com
+        caniscrape init
+        caniscrape push
+        caniscrape telemetry contribute
+        caniscrape --help
+    """
+    if ctx.invoked_subcommand is None:
+        if ctx.args and ctx.args[0].startswith(('http://', 'https://')):
+            url = ctx.args[0]
+            ctx.invoke(scan_command, url=url)
+        else:
+            click.echo(ctx.get_help())
+
+@cli.command(name='init')
+def init():
+    """
+    Link this directory to a caniscrape Cloud project.
+
+    This creates a .caniscrape/config file that stores your project
+    connection. After linking, all scans will automatically upload to
+    your cloud project for history tracking and comparison.
+    """
+    init_command()
+
+@cli.command(name='link')
+def link():
+    """
+    Link this directory to an existing cloud project.
+    
+    Use this when you've created a project on the web dashboard
+    and want to connect it to your local CLI.
+    """
+    link_command()
+
+@cli.command(name='push')
+def push():
+    """
+    Push local scan results to your cloud project.
+    
+    This uploads any scans that were saved locally (e.g., when
+    offline or rate-limited). Works like 'git push'.
+    """
+    push_command()
+
+@cli.group(name='telemetry')
+def telemetry_group():
+    """
+    Manage telemetry and public data contributions.
+    """
+    pass
+
+@telemetry_group.group(name='usage')
+def usage_group():
+    """
+    Manage anonymous usage telemetry.
+    """
+    pass
+
+@usage_group.command(name='on')
+def usage_on():
+    """
+    Enable anonymous usage telemetry.
+    """
+    manager = get_telemetry_manager()
+    manager.enable_usage_telemetry()
+
+@usage_group.command(name='off')
+def usage_off():
+    """
+    Disable anonymous usage telemetry.
+    """
+    manager = get_telemetry_manager()
+    manager.disable_usage_telemetry()
+
+@telemetry_group.group(name='scans')
+def scans_group():
+    """
+    Manage public scan contributions.
+    """
+    pass
+
+@scans_group.command(name='on')
+def scans_on():
+    """
+    Enable public scan contributions.
+    """
+    manager = get_telemetry_manager()
+    manager.enable_scan_telemetry()
+
+@scans_group.command(name='off')
+def scans_off():
+    """
+    Disable public scan contributions.
+    """
+    manager = get_telemetry_manager()
+    manager.disable_scan_telemetry()
+
+@telemetry_group.command(name='delete')
+def delete():
+    """
+    Delete all collected telemetry data (GDPR).
+    """
+    manager = get_telemetry_manager()
+    manager.request_data_deletion()
+
+@telemetry_group.command(name='status')
+def telemetry_status():
+    """
+    Show current telemetry settings.
+    """
+    manager = get_telemetry_manager()
+    manager.show_status()
+
+@cli.group(name='config')
+def config_group():
+    """
+    Manage project configuration.
+    """
+
+@config_group.command(name='set')
+@click.argument('key', type=click.Choice(['auto-upload']))
+@click.argument('value', type=click.Choice(['on', 'off']))
+def set_config(key, value):
+    """
+    Update configuration settings.
+    """
+    set_config_command(key, value)
+
+@config_group.command(name='show')
+def show_config():
+    """
+    Show current configuration.
+    """
+    show_config_command()
+
+@cli.command(name='scan', context_settings=dict(ignore_unknown_options=True))
 @click.argument('url')
 @click.option(
     '--find-all',
@@ -71,9 +225,11 @@ from .recommendations.recommender import generate_recommendations
     default=None,
     help='API key for the selected CAPTCHA solving service.'
 )
-def cli(url: str, find_all: bool, impersonate: bool, scan_depth: str | None, proxies: tuple[str, ...], captcha_service: str | None, captcha_api_key: str | None, ):
+def scan_command(url: str, find_all: bool, impersonate: bool, scan_depth: str | None, proxies: tuple[str, ...], captcha_service: str | None, captcha_api_key: str | None, ):
     """
-    Analyzes a single URL for scraping difficulty.
+    Analyze a website's anti-bot protections.
+    
+    This is the main command that performs the full analysis of a website.
     """
     if not url.startswith(('http://', 'https://')):
         url = f'http://{url}'
@@ -91,54 +247,111 @@ def cli(url: str, find_all: bool, impersonate: bool, scan_depth: str | None, pro
         print('    [yellow]You have 5 seconds after the above message(s) to cancel. (Ctrl + C to cancel)[/yellow]')
         sleep(5)
 
-    print('Checking robots.txt...')
-    robots_result = check_robots_txt(url, proxies=proxies)
-    crawl_delay = robots_result.get('crawl_delay')
+    previous_scan = check_for_diff(url)
 
-    print('Analyzing TLS fingerprint...')
-    tls_result = asyncio.run(analyze_tls_fingerprint(url, proxies=proxies))
+    try:
+        print('Checking robots.txt...')
+        robots_result = check_robots_txt(url, proxies=proxies)
+        crawl_delay = robots_result.get('crawl_delay')
 
-    print('Analyzing for advanced fingerprinting...')
-    fingerprint_result = analyze_fingerprinting(url, proxies=proxies)
+        print('Analyzing TLS fingerprint...')
+        tls_result = asyncio.run(analyze_tls_fingerprint(url, proxies=proxies))
 
-    print('Performing function integrity analysis...')
-    integrity_result = analyze_function_integrity(url, proxies=proxies)
+        print('Analyzing for advanced fingerprinting...')
+        fingerprint_result = analyze_fingerprinting(url, proxies=proxies)
 
-    print('Analyzing JavaScript rendering...')
-    js_result = analyze_js_rendering(url, proxies=proxies)
+        print('Performing function integrity analysis...')
+        integrity_result = analyze_function_integrity(url, proxies=proxies)
 
-    if scan_depth is None:
-        print('Analyzing for behavioral traps (default scan)...')
-    else:
-        print(f'Analyzing for behavioral traps ({scan_depth} scan)...')
-    behavioral_result = detect_honeypots(url, scan_depth=scan_depth, proxies=proxies)
+        print('Analyzing JavaScript rendering...')
+        js_result = analyze_js_rendering(url, proxies=proxies)
 
-    print('Detecting CAPTCHA...')
-    captcha_result = detect_captcha(url, service_name=captcha_service, api_key=captcha_api_key, proxies=proxies)
+        if scan_depth is None:
+            print('Analyzing for behavioral traps (default scan)...')
+        else:
+            print(f'Analyzing for behavioral traps ({scan_depth} scan)...')
+        behavioral_result = detect_honeypots(url, scan_depth=scan_depth, proxies=proxies)
 
-    if impersonate:
-        print('Profiling rate limits with browser-like client...')
-    else:
-        print('Profiling rate limits with Python client...')
-    rate_limit_result = asyncio.run(profile_rate_limits(url, crawl_delay, impersonate, proxies=proxies))
+        print('Detecting CAPTCHA...')
+        captcha_result = detect_captcha(url, service_name=captcha_service, api_key=captcha_api_key, proxies=proxies)
 
-    print('Running WAF detection...')
-    waf_result = detect_waf(url, find_all, proxies=proxies)
+        if impersonate:
+            print('Profiling rate limits with browser-like client...')
+        else:
+            print('Profiling rate limits with Python client...')
+        rate_limit_result = asyncio.run(profile_rate_limits(url, crawl_delay, impersonate, proxies=proxies))
 
-    all_results = {
-        'robots': robots_result,
-        'tls': tls_result,
-        'js': js_result,
-        'behavioral': behavioral_result,
-        'captcha': captcha_result,
-        'rate_limit': rate_limit_result,
-        'waf': waf_result,
-        'fingerprint': fingerprint_result,
-        'integrity': integrity_result
-    }
+        print('Running WAF detection...')
+        waf_result = detect_waf(url, find_all, proxies=proxies)
 
-    score_card = calculate_difficulty_score(all_results)
-    recommendations = generate_recommendations(all_results)
+        all_results = {
+            'robots': robots_result,
+            'tls': tls_result,
+            'js': js_result,
+            'behavioral': behavioral_result,
+            'captcha': captcha_result,
+            'rate_limit': rate_limit_result,
+            'waf': waf_result,
+            'fingerprint': fingerprint_result,
+            'integrity': integrity_result
+        }
+
+        score_card = calculate_difficulty_score(all_results)
+        recommendations = generate_recommendations(all_results)
+
+        complete_scan_result = {
+            'url': url,
+            'score_card': score_card,
+            'protections': all_results,
+            'recommendations': recommendations
+        }
+
+        telemetry = get_telemetry_manager()
+        telemetry.prompt_usage_telemetry()
+        telemetry.prompt_scan_telemetry()
+
+        telemetry.track_usage_event('scan_complete', __version__, metadata = {
+            'score': score_card['score'],
+            'difficulty_label': score_card['label']
+        }, silent=True)
+
+        telemetry.contribute_scan(url, complete_scan_result, __version__, silent=False)
+
+        config = find_config_in_parents()
+        auto_upload_enabled = config.get('auto_upload', False) if config else False
+
+        if auto_upload_enabled:
+            upload_success = try_upload_scan(url, complete_scan_result, cli_version=__version__)
+            
+            if not upload_success:
+                save_to_cache(url, complete_scan_result, cli_version=__version__)
+                print('[yellow]⚠️  Upload failed. Results cached locally.[/yellow]')
+                print('[dim]    Run [cyan]caniscrape push[/cyan] to retry.[/dim]')
+        else:
+            save_to_cache(url, complete_scan_result, cli_version=__version__)
+            print('[dim]💾 Results saved locally. Run [cyan]caniscrape push[/cyan] to upload.[/dim]')
+    
+    except Exception as e:
+        telemetry.track_event('scan_error', __version__, metadata = {
+            'error_type': type(e).__name__,
+            'error_message': str(e)[:100]
+        }, silent=True)
+        raise
+
+    if should_show_diff(previous_scan):
+        current_scan = {
+            'url': url,
+            'score_card': score_card,
+            'protections': all_results,
+            'recommendations': recommendations
+        }
+
+        diff = compare_scans(current_scan, previous_scan)
+        try:
+            prev_date = datetime.fromisoformat(previous_scan['created_at']).strftime('%Y-%m-%d %H:%M')
+        except:
+            prev_date = 'previous scan'
+        display_diff(diff, prev_date)
 
     print('\n')
     print(Rule(f"[bold white on blue] DIFFICULTY SCORE: {score_card['score']}/10 ({score_card['label']}) [/]", style="blue"))
@@ -332,6 +545,22 @@ def cli(url: str, find_all: bool, impersonate: bool, scan_depth: str | None, pro
     print()
     print(Rule("[bold]Analysis Complete[/bold]", style="green"))
     print()
+
+@cli.command(name='analyze', hidden=True)
+@click.argument('url')
+@click.option('--find-all', is_flag=True, default=False)
+@click.option('--impersonate', is_flag=True, default=False)
+@click.option('--thorough', 'scan_depth', flag_value='thorough')
+@click.option('--deep', 'scan_depth', flag_value='deep')
+@click.option('--proxy', 'proxies', multiple=True, type=str)
+@click.option('--captcha-service', type=click.Choice(['capsolver', '2captcha'], case_sensitive=False), default=None)
+@click.option('--captcha-api-key', type=str, default=None)
+@click.pass_context
+def analyze_alias(ctx, url, **kwargs):
+    """
+    Hidden alias for backward compatibility.
+    """
+    ctx.invoke(scan_command, url=url, **kwargs)
 
 if __name__ == '__main__':
     cli()
