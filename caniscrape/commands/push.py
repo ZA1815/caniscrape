@@ -55,7 +55,7 @@ def push_command():
             client.upload_scan(
                 project_id=project_id,
                 url=url,
-                scan_data=scan_data,
+                scan_data=scan_data['scan_data'],
                 cli_version=cli_version
             )
 

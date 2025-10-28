@@ -40,17 +40,9 @@ from .upload_handler import save_to_cache
 
 __version__ = '1.0.0'
 
-@click.group(invoke_without_command=True)
+@click.group(invoke_without_command=True, context_settings=dict(ignore_unknown_options=True, allow_extra_args=True))
 @click.pass_context
 def cli(ctx):
-    """
-    Examples:
-        caniscrape https://example.com
-        caniscrape init
-        caniscrape push
-        caniscrape telemetry contribute
-        caniscrape --help
-    """
     if ctx.invoked_subcommand is None:
         if ctx.args and ctx.args[0].startswith(('http://', 'https://')):
             url = ctx.args[0]

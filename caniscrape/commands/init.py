@@ -66,7 +66,7 @@ def init_command():
 
     print('\n[dim]Creating project...[/dim]')
     try:
-        project = client.create_project(name=project_name.strip(), description=project_description.strip() if project else None)
+        project = client.create_project(name=project_name.strip(), description=project_description.strip() if project_description else None)
         print(f'[green]✅ Project created: {project["name"]}[/green]')
     except ApiError as e:
         print(f'[red]❌ Failed to create project: {str(e)}[/red]')
@@ -107,7 +107,7 @@ def init_command():
         f'[bold]Project ID:[/bold] {project["id"]}\n\n'
         f'[bold]Next steps:[/bold]\n'
         f'1. Run [cyan]caniscrape <url>[/cyan] to analyze a website\n'
-        f'2. Your scan results will automatically upload to the cloud\n'
+        f'{"2. Your scan results will automatically upload to the cloud\n" if auto_upload else "2. Your scan results will have to be manually pushed to the cloud using caniscrape push\n"}'
         f'3. View your scan history at [link]https://caniscrape.org/projects[/link]\n\n'
         f'[dim]💡 Tip: Create projects on the web dashboard and use[/dim]\n'
         f'[dim]   [cyan]caniscrape link[/cyan] to connect them to different directories[/dim]',

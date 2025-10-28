@@ -5,7 +5,7 @@ from typing import Any
 class Config:
     CONFIG_DIR = '.caniscrape'
     CONFIG_FILE = 'config'
-    DEFAULT_API_ENDPOINT = 'caniscrape-web-production.up.railway.app'
+    DEFAULT_API_ENDPOINT = 'https://caniscrape-web-production.up.railway.app'
 
     def __init__(self, base_path: str | Path = '.'):
         self.base_path = Path(base_path).resolve()

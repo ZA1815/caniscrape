@@ -89,14 +89,6 @@ def compare_scans(current_scan: dict, previous_scan: dict) -> dict:
     elif not curr_js and prev_js:
         diff['protections_removed'].append('JavaScript rendering required')
 
-    prev_robots = prev_protections.get('robots', {}).get('status', {}).get('scraping_disallowed', False)
-    curr_robots = curr_protections.get('robots', {}).get('status', {}).get('scraping_disallowed', False)
-
-    if curr_robots and not prev_robots:
-        diff['protections_added'].append('Robots.txt does not allow scraping')
-    elif not curr_robots and prev_robots:
-        diff['protections_removed'].append('Robots.txt does not allow scraping')
-
     return diff
 
 def display_diff(diff: dict, previous_scan_date: str) -> None:
