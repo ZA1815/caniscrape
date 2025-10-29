@@ -12,8 +12,9 @@ Stop wasting hours building scrapers only to discover the site has Cloudflare + 
 - **Difficulty score** (0-10 scale: Easy → Very Hard)
 - **Specific recommendations** on what tools/proxies you'll need
 - **Estimated complexity** so you can decide: build it yourself or use a service
-- **Advanced fingerprinting detection** (NEW in v0.3.0)
-- **Browser integrity analysis** (NEW in v0.3.0)
+- **Historical changes** track how protections evolve over time (NEW in v1.0.0)
+- **Advanced fingerprinting detection** (v0.3.0)
+- **Browser integrity analysis** (v0.3.0)
 - **CAPTCHA solving capability** (v0.2.0)
 - **Proxy rotation support** (v0.2.0)
 
@@ -24,7 +25,7 @@ Stop wasting hours building scrapers only to discover the site has Cloudflare + 
 pip install caniscrape
 ```
 
-**Required dependency:**
+**Required dependencies:**
 ```bash
 # Install wafw00f (WAF detection)
 pipx install wafw00f
@@ -35,11 +36,46 @@ playwright install chromium
 
 ### Basic Usage
 ```bash
-caniscrape https://example.com
+# Analyze a website
+caniscrape scan https://example.com
+```
+
+### Cloud Integration (NEW in v1.0.0)
+```bash
+# One-time setup: link to cloud for scan history
+caniscrape init
+
+# Now all scans automatically sync to cloud
+caniscrape scan https://example.com
+
+# View scan history at https://caniscrape.org/projects
 ```
 
 ### Example Output
 ![caniscrape output](https://github.com/user-attachments/assets/ca805834-b3fe-4bf9-aae7-23194d15a9c8)
+
+## 🆕 What's New in v1.0.0
+
+### Cloud Integration ☁️
+- **Persistent scan history**: Track how site protections change over time
+- **Automatic sync**: Enable auto-upload to push every scan to the cloud
+- **Smart diffing**: Automatically detect when protections change
+- **Offline support**: Scans cache locally when offline, push them later
+
+### Privacy-First Telemetry 📊
+- **Usage telemetry**: Anonymous CLI usage stats (opt-in)
+- **Public scan database**: Contribute to a searchable database of site protections (opt-in)
+- **Full control**: Easy opt-out and GDPR data deletion
+
+### Scan Comparison 🔄
+- Automatically compares new scans against previous ones
+- Highlights difficulty score changes, new/removed protections
+- Shows exactly what changed and when
+
+**Previous updates:**
+- **v0.3.0**: Advanced fingerprinting detection and browser integrity analysis
+- **v0.2.0**: Proxy rotation and CAPTCHA solving capabilities
+- **v0.1.0**: Initial release with core detection features
 
 ## 🔬 What It Analyzes
 
@@ -60,7 +96,7 @@ Identifies Web Application Firewalls (Cloudflare, Akamai, Imperva, DataDome, Per
 - Scans for reCAPTCHA, hCaptcha, Cloudflare Turnstile
 - Tests if CAPTCHA appears on load or after rate limiting
 - Monitors network traffic for challenge endpoints
-- Attempt to solve detected CAPTCHAs using Capsolver or 2Captcha
+- Attempts to solve detected CAPTCHAs using Capsolver or 2Captcha
 
 ### 5. **TLS Fingerprinting**
 - Compares standard Python clients vs browser-like clients
@@ -70,13 +106,13 @@ Identifies Web Application Firewalls (Cloudflare, Akamai, Imperva, DataDome, Per
 - Scans for invisible "honeypot" links (bot traps)
 - Detects if site is monitoring mouse/scroll behavior
 
-### 7. **Advanced Fingerprinting Detection** ✨ NEW in v0.3.0
+### 7. **Advanced Fingerprinting Detection**
 - Identifies enterprise bot detection services (PerimeterX, DataDome, Akamai Bot Manager, etc.)
 - Detects canvas fingerprinting attempts
 - Monitors which user events are being tracked (mouse, keyboard, scroll)
 - Catches client-side bot detection that traditional tools miss
 
-### 8. **Browser Integrity Analysis** ✨ NEW in v0.3.0
+### 8. **Browser Integrity Analysis**
 - Forensic-level check of browser function modifications
 - Detects tampering with canvas APIs, timing functions
 - Identifies anti-debugging techniques
@@ -86,36 +122,77 @@ Identifies Web Application Firewalls (Cloudflare, Akamai, Imperva, DataDome, Per
 - Checks scraping permissions
 - Extracts recommended crawl-delay
 
+### 10. **Change Detection** ✨ v1.0.0
+- Compares scans against previous results
+- Highlights new/removed protections
+- Tracks difficulty score changes over time
+
 ## 🛠️ Advanced Usage
+
+### Cloud Commands (NEW in v1.0.0)
+```bash
+# Link this directory to a cloud project
+caniscrape init
+
+# Connect to an existing project
+caniscrape link
+
+# Push cached scans to cloud
+caniscrape push
+
+# Configure auto-upload
+caniscrape config set auto-upload on
+caniscrape config set auto-upload off
+
+# View current configuration
+caniscrape config show
+```
+
+### Telemetry Management (NEW in v1.0.0)
+```bash
+# Manage usage telemetry
+caniscrape telemetry usage on
+caniscrape telemetry usage off
+
+# Manage public scan contributions
+caniscrape telemetry scans on
+caniscrape telemetry scans off
+
+# Delete all telemetry data (GDPR)
+caniscrape telemetry delete
+
+# View telemetry status
+caniscrape telemetry status
+```
 
 ### Aggressive WAF Detection
 ```bash
 # Find ALL WAFs (slower, may trigger rate limits)
-caniscrape https://example.com --find-all
+caniscrape scan https://example.com --find-all
 ```
 
 ### Browser Impersonation
 ```bash
 # Use curl_cffi for better stealth (slower but more likely to succeed)
-caniscrape https://example.com --impersonate
+caniscrape scan https://example.com --impersonate
 ```
 
 ### Deep Honeypot Scanning
 ```bash
 # Check 2/3 of links (more accurate, slower)
-caniscrape https://example.com --thorough
+caniscrape scan https://example.com --thorough
 
 # Check ALL links (most accurate, very slow on large sites)
-caniscrape https://example.com --deep
+caniscrape scan https://example.com --deep
 ```
 
 ### Proxy Rotation
 ```bash
 # Use a single proxy
-caniscrape https://example.com --proxy "http://user:pass@host:port"
+caniscrape scan https://example.com --proxy "http://user:pass@host:port"
 
 # Use multiple proxies (random rotation)
-caniscrape https://example.com \
+caniscrape scan https://example.com \
   --proxy "http://user:pass@host1:port" \
   --proxy "socks5://user:pass@host2:port" \
   --proxy "http://host3:port"
@@ -130,12 +207,12 @@ caniscrape https://example.com \
 ### CAPTCHA Solving
 ```bash
 # Detect and attempt to solve CAPTCHAs
-caniscrape https://example.com \
+caniscrape scan https://example.com \
   --captcha-service capsolver \
   --captcha-api-key "YOUR_API_KEY"
 
 # Supported services: capsolver, 2captcha
-caniscrape https://example.com \
+caniscrape scan https://example.com \
   --captcha-service 2captcha \
   --captcha-api-key "YOUR_API_KEY"
 ```
@@ -148,7 +225,7 @@ caniscrape https://example.com \
 
 ### Combine Options
 ```bash
-caniscrape https://example.com \
+caniscrape scan https://example.com \
   --impersonate \
   --find-all \
   --thorough \
@@ -162,20 +239,20 @@ caniscrape https://example.com \
 
 The tool calculates a 0-10 difficulty score based on:
 
-| Factor | Impact |
-|--------|--------|
-| **CAPTCHA on page load** | +5 points |
-| **CAPTCHA after rate limit** | +4 points |
-| **DataDome/PerimeterX WAF** | +4 points |
-| **Akamai/Imperva WAF** | +3 points |
-| **Aggressive rate limiting** | +3 points |
-| **High-tier bot detection** (PerimeterX, DataDome, etc.) | +2 points |
-| **Cloudflare WAF** | +2 points |
-| **Honeypot traps detected** | +2 points |
-| **Canvas fingerprinting** | +1 point |
-| **Browser function modifications** | +1 point |
-| **Medium-tier bot detection** | +1 point |
-| **TLS fingerprinting active** | +1 point |
+| Factor | Impact | Version Added |
+|--------|--------|---------------|
+| **CAPTCHA on page load** | +5 points | v0.1.0 |
+| **CAPTCHA after rate limit** | +4 points | v0.1.0 |
+| **DataDome/PerimeterX WAF** | +4 points | v0.1.0 |
+| **Akamai/Imperva WAF** | +3 points | v0.1.0 |
+| **Aggressive rate limiting** | +3 points | v0.1.0 |
+| **High-tier bot detection** (PerimeterX, DataDome, etc.) | +2 points | v0.3.0 |
+| **Cloudflare WAF** | +2 points | v0.1.0 |
+| **Honeypot traps detected** | +2 points | v0.2.0 |
+| **Canvas fingerprinting** | +1 point | v0.3.0 |
+| **Browser function modifications** | +1 point | v0.3.0 |
+| **Medium-tier bot detection** | +1 point | v0.3.0 |
+| **TLS fingerprinting active** | +1 point | v0.1.0 |
 
 **Score interpretation:**
 - **0-2**: Easy (basic scraping will work)
@@ -204,6 +281,9 @@ pip install wafw00f
 
 # 3. Install Playwright browsers (for JS/CAPTCHA/behavioral detection)
 playwright install chromium
+
+# 4. (Optional) Set up cloud integration
+caniscrape init
 ```
 
 ### Dependencies
@@ -215,6 +295,7 @@ Core dependencies (installed automatically):
 - `beautifulsoup4` - HTML parsing
 - `playwright` - Headless browser automation
 - `curl_cffi` - Browser impersonation
+- `requests` - HTTP client for API
 
 External tools (install separately):
 - `wafw00f` - WAF detection
@@ -228,49 +309,27 @@ External tools (install separately):
 - **Proxy testing**: Verify your proxy pool works against target sites
 - **CAPTCHA assessment**: Determine if CAPTCHA solving is required
 - **Fingerprinting analysis**: Understand which evasion techniques you'll need
+- **Long-term monitoring**: Track when sites upgrade their defenses (NEW in v1.0.0)
 
 ### For Data Engineers
 - **Pipeline planning**: Know what infrastructure you'll need (proxies, CAPTCHA solvers, anti-detection tools)
 - **Cost estimation**: Calculate proxy/CAPTCHA costs before committing to a data source
 - **Vendor selection**: Test different proxy and CAPTCHA solving services
 - **Protection monitoring**: Track when sites upgrade their bot detection
+- **Historical analysis**: Identify patterns in protection changes (NEW in v1.0.0)
 
 ### For Researchers
 - **Site selection**: Find the easiest data sources for your research
 - **Compliance**: Check robots.txt before scraping
 - **Anonymity**: Test data collection through proxy infrastructure
 - **Evasion research**: Study real-world bot detection implementations
+- **Longitudinal studies**: Track protection evolution over time (NEW in v1.0.0)
 
-## 🆕 What's New in v0.3.0
-
-This release introduces **forensic-level fingerprinting detection** that reveals sophisticated, client-side protections traditional tools miss.
-
-### 1. Advanced Fingerprinting Detection
-- Detects enterprise bot detection services (PerimeterX, DataDome, Akamai, Kasada, Shape Security, etc.)
-- Identifies canvas fingerprinting attempts
-- Monitors behavioral tracking (which user events the site listens to)
-- Operates in the browser to catch protections that only activate client-side
-
-### 2. Browser Integrity Analysis
-- Compares critical browser functions against a clean baseline
-- Detects function tampering for canvas APIs, network hooks, timing functions
-- Explains what each modification indicates (fingerprinting type, evasion detection method)
-- Forensic-level insight into how sites are trying to detect bots
-
-### 3. Smarter Scoring & Recommendations
-- Updated scoring to account for advanced protections
-- No double-counting of Cloudflare detections
-- Tiered bot detection scoring (high-tier vs medium-tier services)
-- Recommendations now include specific anti-detection tools and evasion techniques
-
-### 4. Performance & Stability
-- Better error handling across all analyzers
-- More informative error messages
-- Optimized fingerprinting detection speed
-
-**Previous updates:**
-- **v0.2.0**: Added proxy rotation and CAPTCHA solving capabilities
-- **v0.1.0**: Initial release with core detection features
+### For Teams (NEW in v1.0.0)
+- **Centralized scan management**: All team members can view scan history
+- **Onboarding**: New team members see previous scans immediately
+- **Change alerts**: Track when target sites upgrade their defenses
+- **Collaboration**: Share scan URLs from cloud dashboard
 
 ## ⚠️ Limitations & Disclaimers
 
@@ -296,6 +355,13 @@ This release introduces **forensic-level fingerprinting detection** that reveals
 - CAPTCHA solving success depends on service quality and site complexity
 - Fingerprinting detection requires JavaScript execution (uses Playwright)
 
+### Privacy & Telemetry (NEW in v1.0.0)
+- **Usage telemetry**: Optional, anonymous CLI usage stats
+- **Scan telemetry**: Optional, public scan database contributions
+- **Cloud integration**: Requires account but no personal data is required
+- **Data deletion**: Full GDPR compliance with `caniscrape telemetry delete`
+- See detailed privacy policy at https://caniscrape.org/privacy
+
 ## 🤝 Contributing
 
 Found a bug? Have a feature request? Contributions are welcome!
@@ -320,6 +386,10 @@ Built on top of:
 ## 📬 Contact
 
 Questions? Feedback? Open an issue on GitHub.
+
+- **GitHub Issues**: https://github.com/ZA1815/caniscrape/issues
+- **Cloud Dashboard**: https://caniscrape.org
+- **Documentation**: https://docs.caniscrape.org (coming soon)
 
 ---
 
