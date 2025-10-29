@@ -206,13 +206,28 @@ class TelemetryManager:
         
         try:
             score_card = scan_data.get('score_card', {})
+            protections = scan_data.get('protections', {})
+            
+            protection_summary = {
+                'robots': protections.get('robots', {}),
+                'tls': protections.get('tls', {}),
+                'js': protections.get('js', {}),
+                'behavioral': protections.get('behavioral', {}),
+                'captcha': protections.get('captcha', {}),
+                'rate_limit': protections.get('rate_limit', {}),
+                'waf': protections.get('waf', {}),
+                'fingerprint': protections.get('fingerprint', {}),
+                'integrity': protections.get('integrity', {})
+            }
             
             payload = {
                 'url': url,
                 'difficulty_score': score_card.get('score', 0),
                 'difficulty_label': score_card.get('label', 'Unknown'),
                 'scan_data': scan_data,
-                'cli_version': cli_version
+                'protection_summary': protection_summary,
+                'cli_version': cli_version,
+                'timestamp': datetime.now(timezone.utc).isoformat()
             }
 
             response = requests.post(
