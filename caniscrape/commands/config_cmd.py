@@ -1,4 +1,5 @@
 from ..config import find_config_in_parents
+from rich import print
 
 def set_config_command(key, value):
     """

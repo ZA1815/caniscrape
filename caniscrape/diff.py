@@ -45,7 +45,7 @@ def compare_scans(current_scan: dict, previous_scan: dict) -> dict:
                 curr_wafs.add(waf[0] if waf else '')
     
     prev_wafs = {w for w in prev_wafs if w}
-    curr_wafs = {w for w in prev_wafs if w}
+    curr_wafs = {w for w in curr_wafs if w}
 
     wafs_added = curr_wafs - prev_wafs
     wafs_removed = prev_wafs - curr_wafs

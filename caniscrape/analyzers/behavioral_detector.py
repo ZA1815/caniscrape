@@ -26,8 +26,8 @@ def detect_honeypots(url: str, scan_depth: str = 'default', proxies: tuple[str, 
 
             page.goto(url, wait_until='domcontentloaded', timeout=30000)
 
-            links_locater = page.locator('a')
-            total_links = links_locater.count()
+            links_locator = page.locator('a')
+            total_links = links_locator.count()
 
             if total_links == 0:
                 browser.close()
@@ -43,7 +43,7 @@ def detect_honeypots(url: str, scan_depth: str = 'default', proxies: tuple[str, 
             
             invisible_links_count = 0
             for i in range(links_to_check):
-                link = links_locater.nth(i)
+                link = links_locator.nth(i)
                 if not link.is_visible():
                     invisible_links_count += 1
             

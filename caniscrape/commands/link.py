@@ -6,6 +6,7 @@ from rich.panel import Panel
 from datetime import datetime
 
 from ..config import Config
+from .init import init_command
 from ..api_client import ApiClient, ApiError
 
 def link_command():
@@ -79,17 +80,23 @@ def link_command():
     print()
     
     while True:
-        choice = Prompt.ask('Select a project', default='1')
-        
+        choice = Prompt.ask('Select a project (select 0 to create a new one)', default='0')
+
         try:
-            idx = int(choice) - 1
-            if 0 <= idx < len(projects):
-                selected_project = projects[idx]
-                break
-            else:
-                print('[red]Invalid choice. Try again.[/red]')
+            idx = int(choice)
         except ValueError:
             print('[red]Please enter a number.[/red]')
+            continue
+
+        if idx == 0:
+            return init_command()
+
+        idx -= 1
+        if 0 <= idx < len(projects):
+            selected_project = projects[idx]
+            break
+        else:
+            print('[red]Invalid choice. Try again.[/red]')
     
     print(f'\n[bold]Step 3: Auto-Upload Settings[/bold]')
     print('Automatically push scan results to this project?\n')
