@@ -20,3 +20,5 @@ Thumbs.db
 .env
 
 .log
+
+.caniscrape/
