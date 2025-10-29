@@ -50,6 +50,7 @@ async def _run_rate_limit_profiler(url: str, baseline_delay: float, impersonate:
     """
     results = {'requests_sent': 0, 'blocking_code': None, 'details': ''}
 
+    session_manager = None
     if impersonate:
         user_agent = BROWSER_IDENTITY.get('User-Agent', '')
         impersonate_target = get_impersonate_target(user_agent)
@@ -80,7 +81,6 @@ async def _run_rate_limit_profiler(url: str, baseline_delay: float, impersonate:
                 results['details'] = f'Blocked during a concurrent burst of {BURST_COUNT} requests.'
                 return results
     finally:
-        # --- Teardown Phase ---
         if session_manager:
             await session_manager.__aexit__(None, None, None)
 

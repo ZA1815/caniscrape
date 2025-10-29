@@ -22,7 +22,7 @@ def compare_scans(current_scan: dict, previous_scan: dict) -> dict:
 
     if curr_score != prev_score:
         diff['score_changed'] = True
-        diff['score_delta'] = curr_score - prev_data
+        diff['score_delta'] = curr_score - prev_score
 
     prev_protections = prev_data.get('protections', {})
     curr_protections = curr_data.get('protections', {})

@@ -240,6 +240,7 @@ def scan_command(url: str, find_all: bool, impersonate: bool, scan_depth: str | 
         sleep(5)
 
     previous_scan = check_for_diff(url)
+    telemetry = get_telemetry_manager()
 
     try:
         print('Checking robots.txt...')
@@ -298,7 +299,6 @@ def scan_command(url: str, find_all: bool, impersonate: bool, scan_depth: str | 
             'recommendations': recommendations
         }
 
-        telemetry = get_telemetry_manager()
         telemetry.prompt_usage_telemetry()
         telemetry.prompt_scan_telemetry()
 
@@ -324,7 +324,7 @@ def scan_command(url: str, find_all: bool, impersonate: bool, scan_depth: str | 
             print('[dim]💾 Results saved locally. Run [cyan]caniscrape push[/cyan] to upload.[/dim]')
     
     except Exception as e:
-        telemetry.track_event('scan_error', __version__, metadata = {
+        telemetry.track_usage_event('scan_error', __version__, metadata = {
             'error_type': type(e).__name__,
             'error_message': str(e)[:100]
         }, silent=True)
@@ -452,9 +452,9 @@ def scan_command(url: str, find_all: bool, impersonate: bool, scan_depth: str | 
     captcha_status = captcha_result['status']
     if captcha_status == 'success':
         if captcha_result.get('captcha_detected'):
-            type = captcha_result['captcha_type']
+            captcha_type = captcha_result['captcha_type']
             trigger = captcha_result['trigger_condition']
-            print(f'    [red]❌ CAPTCHA: {type} detected ({trigger}).[/red]')
+            print(f'    [red]❌ CAPTCHA: {captcha_type} detected ({trigger}).[/red]')
             if captcha_result.get('solve_status') == 'solved':
                 print(f'        [green]✅ {captcha_result["details"]}[/green]')
             elif captcha_result.get('solve_status') == 'failed':

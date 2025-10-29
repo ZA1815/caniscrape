@@ -17,17 +17,23 @@ def check_robots_txt(url: str, proxies: tuple[str, ...] = ()) -> dict[str, any]:
         parsed_url = urlparse(url)
         robots_url = urlunparse((parsed_url.scheme, parsed_url.netloc, 'robots.txt', '', '', ''))
 
-        proxies_dict = None
         if proxies:
             proxy = random.choice(proxies)
-            proxies_dict = {'http': proxy, 'https': proxy}
 
-        chosen_identity = random.choice(MODERN_BROWSER_IDENTITIES)
-        user_agent = chosen_identity.get('User-Agent', '')
-        impersonate_target = get_impersonate_target(user_agent)
+            chosen_identity = random.choice(MODERN_BROWSER_IDENTITIES)
+            user_agent = chosen_identity.get('User-Agent', '')
+            impersonate_target = get_impersonate_target(user_agent)
 
-        with CurlCffiSession(impersonate=impersonate_target, proxies=proxies_dict) as session:
-            response = session.get(robots_url, headers=chosen_identity, timeout=15, allow_redirects=True)
+            with CurlCffiSession(impersonate=impersonate_target) as session:
+                response = session.get(robots_url, headers=chosen_identity, timeout=15, allow_redirects=True, proxy=proxy)
+        
+        else:
+            chosen_identity = random.choice(MODERN_BROWSER_IDENTITIES)
+            user_agent = chosen_identity.get('User-Agent', '')
+            impersonate_target = get_impersonate_target(user_agent)
+
+            with CurlCffiSession(impersonate=impersonate_target) as session:
+                response = session.get(robots_url, headers=chosen_identity, timeout=15, allow_redirects=True)
 
         if response.status_code == 200:
             if 'text/html' in response.headers.get('Content-Type', '').lower():

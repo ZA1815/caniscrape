@@ -38,6 +38,7 @@ def detect_captcha(url: str, service_name: str | None, api_key: str | None, prox
     try:
         with sync_playwright() as p:
             launch_options = {'headless': True}
+            proxy_url = None
             if proxies:
                 proxy_url = random.choice(proxies)
                 launch_options['proxy'] = {'server': proxy_url}
@@ -51,7 +52,7 @@ def detect_captcha(url: str, service_name: str | None, api_key: str | None, prox
             page.on('request', capture_request)
 
             try:
-                page.goto(url, wait_until='load', timeout=30000)
+                page.goto(url, wait_until='load', timeout=60000)
                 page.wait_for_load_state('networkidle', timeout=5000)
             except:
                 pass
@@ -74,17 +75,17 @@ def detect_captcha(url: str, service_name: str | None, api_key: str | None, prox
 
                         token = None
                         if 'recaptcha' in captcha_on_load.lower():
-                            token = solver.solve_recaptcha_v2(sitekey=sitekey, page_url=page.url)
+                            token = solver.solve_recaptcha_v2(sitekey=sitekey, page_url=page.url, proxy=proxy_url)
                         elif 'hcaptcha' in captcha_on_load.lower():
-                            token = solver.solve_hcaptcha(sitekey=sitekey, page_url=page.url)
+                            token = solver.solve_hcaptcha(sitekey=sitekey, page_url=page.url, proxy=proxy_url)
                         else:
                             raise CaptchaSolverError(f'Solving for "{captcha_on_load}" is not yet supported.')
                         
                         browser.close()
-                        return {'status': 'success', 'captcha_detected': True, 'captcha_type': captcha_on_load, 'trigger_condition': 'on page load', 'solve_status': 'solved', 'details': f'A {captcha_on_load} was detected and successfully solved by  the {service_name} service.'}
+                        return {'status': 'success', 'captcha_detected': True, 'captcha_type': captcha_on_load, 'trigger_condition': 'on page load', 'solve_status': 'solved', 'details': f'A {captcha_on_load} was detected and successfully solved by the {service_name} service.'}
                     except (CaptchaSolverError, ValueError, ImportError) as e:
                         browser.close()
-                        return {'status': 'success', 'captcha_detected': True, 'captcha_type': captcha_on_load, 'trigger_condition': 'on page load', 'solve_status': 'failed', 'details': f'A {captcha_on_load} was detected and but the solving attempt failed: {str(e)}'}
+                        return {'status': 'success', 'captcha_detected': True, 'captcha_type': captcha_on_load, 'trigger_condition': 'on page load', 'solve_status': 'failed', 'details': f'A {captcha_on_load} was detected but the solving attempt failed: {str(e)}'}
                 else:
                     browser.close()
                     return {'status': 'success', 'captcha_detected': True, 'captcha_type': captcha_on_load, 'trigger_condition': 'on page load', 'solve_status': 'not attempted', 'details': f'A {captcha_on_load} was detected. Provide --captcha-service <your-captcha-service> --captcha-api-key <your-captchasolver-key> to attempt solving.'}
