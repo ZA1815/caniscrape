@@ -2,7 +2,9 @@ from __future__ import annotations
 
 from playwright.sync_api import sync_playwright, Page, TimeoutError as PlaywrightTimeoutError
 import random
+
 from ..utils.captcha_solvers import get_solver, CaptchaSolverError
+from ..utils.playwright_proxy_parser import parse_proxy_for_playwright
 
 CAPTCHA_FINGERPRINTS = {
     "reCAPTCHA": [
@@ -38,10 +40,11 @@ def detect_captcha(url: str, service_name: str | None, api_key: str | None, prox
     try:
         with sync_playwright() as p:
             launch_options = {'headless': True}
-            proxy_url = None
             if proxies:
-                proxy_url = random.choice(proxies)
-                launch_options['proxy'] = {'server': proxy_url}
+                proxy = random.choice(proxies)
+                proxy_config = parse_proxy_for_playwright(proxy)
+                if proxy_config:
+                    launch_options['proxy'] = proxy_config
 
             browser = p.chromium.launch(**launch_options)
             page = browser.new_page()
@@ -77,9 +80,9 @@ def detect_captcha(url: str, service_name: str | None, api_key: str | None, prox
 
                         token = None
                         if 'recaptcha' in captcha_on_load.lower():
-                            token = solver.solve_recaptcha_v2(sitekey=sitekey, page_url=page.url, proxy=proxy_url)
+                            token = solver.solve_recaptcha_v2(sitekey=sitekey, page_url=page.url, proxy=proxy)
                         elif 'hcaptcha' in captcha_on_load.lower():
-                            token = solver.solve_hcaptcha(sitekey=sitekey, page_url=page.url, proxy=proxy_url)
+                            token = solver.solve_hcaptcha(sitekey=sitekey, page_url=page.url, proxy=proxy)
                         else:
                             raise CaptchaSolverError(f'Solving for "{captcha_on_load}" is not yet supported.')
                         

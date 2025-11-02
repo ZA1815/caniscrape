@@ -4,6 +4,8 @@ from playwright.sync_api import sync_playwright, Playwright, Page, TimeoutError 
 from typing import Any
 import json
 
+from ..utils.playwright_proxy_parser import parse_proxy_for_playwright
+
 KNOWN_BOT_DETECTION_SCRIPTS = {
     "PerimeterX (HUMAN)": [
         "client.perimeterx.net",
@@ -95,7 +97,9 @@ def analyze_fingerprinting(url: str, proxies: tuple[str, ...] = ()) ->  dict[str
             launch_options = {'headless': True}
             if proxies:
                 proxy = random.choice(proxies)
-                launch_options['proxy'] = {'server': proxy}
+                proxy_config = parse_proxy_for_playwright(proxy)
+                if proxy_config:
+                    launch_options['proxy'] = proxy_config
 
             browser = p.chromium.launch(**launch_options)
             page = browser.new_page()

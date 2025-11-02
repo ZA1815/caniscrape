@@ -6,7 +6,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setup(
     name='caniscrape',
-    version='1.0.2',
+    version='1.0.3',
     author='Zaid Ahmed',
     author_email='zaahme18@gmail.com',
     description='Analyze website anti-bot protections before you scrape',

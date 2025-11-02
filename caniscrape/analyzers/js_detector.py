@@ -7,6 +7,7 @@ from curl_cffi.requests import Session as CurlCffiSession
 
 from ..utils.browser_identities import MODERN_BROWSER_IDENTITIES
 from ..utils.impersonate_target import get_impersonate_target
+from ..utils.playwright_proxy_parser import parse_proxy_for_playwright
 
 TEST_IDENTITY = random.choice(MODERN_BROWSER_IDENTITIES)
 
@@ -44,8 +45,11 @@ def analyze_js_rendering(url: str, proxies: tuple[str, ...] = ()) -> dict[str, a
 
         with sync_playwright() as p:
             launch_options = {'headless': True}
-            if proxy:
-                launch_options['proxy'] = {'server': proxy}
+            if proxies:
+                proxy = random.choice(proxies)
+                proxy_config = parse_proxy_for_playwright(proxy)
+                if proxy_config:
+                    launch_options['proxy'] = proxy_config
 
             browser = p.chromium.launch(**launch_options)
             page = browser.new_page(extra_http_headers=TEST_IDENTITY)

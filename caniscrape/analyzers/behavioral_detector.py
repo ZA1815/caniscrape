@@ -4,6 +4,7 @@ from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeo
 import math
 import random
 
+from ..utils.playwright_proxy_parser import parse_proxy_for_playwright
 from ..utils.browser_identities import MODERN_BROWSER_IDENTITIES
 
 TEST_IDENTITY = random.choice(MODERN_BROWSER_IDENTITIES)
@@ -19,7 +20,9 @@ def detect_honeypots(url: str, scan_depth: str = 'default', proxies: tuple[str, 
             launch_options = {'headless': True}
             if proxies:
                 proxy = random.choice(proxies)
-                launch_options['proxy'] = {'server': proxy}\
+                proxy_config = parse_proxy_for_playwright(proxy)
+                if proxy_config:
+                    launch_options['proxy'] = proxy_config
                 
             browser = p.chromium.launch(**launch_options)
             page = browser.new_page(extra_http_headers=TEST_IDENTITY)

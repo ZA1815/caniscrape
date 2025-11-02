@@ -2,6 +2,8 @@ from __future__ import annotations
 import random
 from playwright.sync_api import sync_playwright, Playwright, Page, TimeoutError as PlaywrightTimeoutError
 
+from ..utils.playwright_proxy_parser import parse_proxy_for_playwright
+
 FUNCTIONS_TO_CHECK = [
     "HTMLCanvasElement.prototype.toDataURL",
     "HTMLCanvasElement.prototype.getImageData",
@@ -85,7 +87,9 @@ def analyze_function_integrity(url: str, proxies: tuple[str, ...] = ()) -> dict[
             target_context_options = {}
             if proxies:
                 proxy = random.choice(proxies)
-                target_context_options['proxy'] = {'server': proxy}
+                proxy_config = parse_proxy_for_playwright(proxy)
+                if proxy_config:
+                    target_context_options['proxy'] = proxy_config
             
             target_context = browser.new_context(**target_context_options)
             target_page = target_context.new_page()
