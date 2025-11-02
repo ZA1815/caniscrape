@@ -49,6 +49,8 @@ def analyze_js_rendering(url: str, proxies: tuple[str, ...] = ()) -> dict[str, a
 
             browser = p.chromium.launch(**launch_options)
             page = browser.new_page(extra_http_headers=TEST_IDENTITY)
+
+            page.route("**/*", lambda route: route.abort() if route.request.resource_type in ["image", "font", "media"] else route.continue_())
             
             try:
                 page.goto(url, wait_until='load', timeout=30000)

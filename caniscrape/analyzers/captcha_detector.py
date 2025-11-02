@@ -46,6 +46,8 @@ def detect_captcha(url: str, service_name: str | None, api_key: str | None, prox
             browser = p.chromium.launch(**launch_options)
             page = browser.new_page()
 
+            page.route("**/*", lambda route: route.abort() if route.request.resource_type in ["image", "font", "media"] else route.continue_())
+
             captured_requests = []
             def capture_request(request):
                 captured_requests.append(request.url.lower())

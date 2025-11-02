@@ -24,6 +24,8 @@ def detect_honeypots(url: str, scan_depth: str = 'default', proxies: tuple[str, 
             browser = p.chromium.launch(**launch_options)
             page = browser.new_page(extra_http_headers=TEST_IDENTITY)
 
+            page.route("**/*", lambda route: route.abort() if route.request.resource_type in ["image", "font", "media"] else route.continue_())
+
             page.goto(url, wait_until='domcontentloaded', timeout=30000)
 
             links_locator = page.locator('a')

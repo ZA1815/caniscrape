@@ -75,6 +75,9 @@ def analyze_function_integrity(url: str, proxies: tuple[str, ...] = ()) -> dict[
 
             clean_context = browser.new_context()
             clean_page = clean_context.new_page()
+
+            clean_page.route("**/*", lambda route: route.abort() if route.request.resource_type in ["image", "font", "media"] else route.continue_())
+
             clean_page.goto('about:blank')
             clean_signatures = _get_function_signatures(clean_page, FUNCTIONS_TO_CHECK)
             clean_context.close()
@@ -86,6 +89,9 @@ def analyze_function_integrity(url: str, proxies: tuple[str, ...] = ()) -> dict[
             
             target_context = browser.new_context(**target_context_options)
             target_page = target_context.new_page()
+
+            target_page.route("**/*", lambda route: route.abort() if route.request.resource_type in ["image", "font", "media"] else route.continue_())
+            
             target_page.goto(url, wait_until='load', timeout=30000)
             
             target_signatures = _get_function_signatures(target_page, FUNCTIONS_TO_CHECK)

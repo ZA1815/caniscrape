@@ -100,6 +100,8 @@ def analyze_fingerprinting(url: str, proxies: tuple[str, ...] = ()) ->  dict[str
             browser = p.chromium.launch(**launch_options)
             page = browser.new_page()
 
+            page.route("**/*", lambda route: route.abort() if route.request.resource_type in ["image", "font", "media"] else route.continue_())
+
             page.add_init_script(JS_PROBE_SCRIPT)
 
             page.on('request', lambda request: captured_script_urls.add(request.url))
